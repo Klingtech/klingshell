@@ -10,18 +10,30 @@
 #elif defined(ESP8266)
 #include "platform/esp8266/KlingShell_esp8266.h"
 #endif
-
 #include "KlingShell.h"
-#include "credentials.h"
 #include <vector>
+
+// Enter your wifi details here or create credentials.h in the same directory as the main.cpp file and add the following:
+// const char *ssid = "*********";
+// const char *password = "**********";
+
+// Enter your KlingShell server here
+// const char *server = "http://IPORDNS:10000/KlingShell";
+
+// Comment out if not using credentials.h for above details
+#include "credentials.h"
 
 // Define the GPIO pins for different ESP32 models
     // Define the GPIO pins for different ESP32/ESP8266 models
     std::vector<int> digitalPins;
     std::vector<int> analogPins;
 
-// Function to set pins based on the chip model
-
+/**
+ * @brief Function to set pins based on the chip model
+ * 
+ * This function uses the esp_chip_info library to determine the model of the ESP32 chip.
+ * It then populates the digitalPins and analogPins vectors with the appropriate pins for the chip model.
+ */
 #ifndef ESP8266
 void setPinsBasedOnChipModel() {
     esp_chip_info_t chip_info;
@@ -48,6 +60,15 @@ void setPinsBasedOnChipModel() {
     analogPins = {A0};
 }
 #endif
+
+/**
+ * @brief Function to generate the device ID
+ * 
+ * This function uses the esp_chip_info library to determine the model and revision of the ESP32 chip.
+ * It then retrieves the MAC address of the chip and formats it into a device ID string.
+ * 
+ * @return A string representing the device ID
+ */
 
 String getDeviceId() {
 #ifndef ESP8266
@@ -93,6 +114,15 @@ String getDeviceId() {
 #endif
 }
 
+/**
+ * @brief Function to list the available GPIO pins
+ * 
+ * This function iterates through the digitalPins and analogPins vectors and checks the pin mode and availability.
+ * It then constructs a string with information about each pin.
+ * 
+ * @return A string containing information about the available GPIO pins
+ */
+
 String listPins() {
     String pinInfo = "Available GPIO Pins:\n";
     for (int pin : digitalPins) {
@@ -117,6 +147,15 @@ String listPins() {
     return pinInfo;
 }
 
+/**
+ * @brief Function to report the current state of the GPIO pins
+ * 
+ * This function iterates through the digitalPins and analogPins vectors and reads the pin state or value.
+ * It then constructs a string with information about the state of each pin.
+ * 
+ * @return A string containing information about the state of the GPIO pins
+ */
+
 void reportPinStates() {
     String report;
 
@@ -138,6 +177,13 @@ void reportPinStates() {
     KlingShell.println(report);
 }
 
+/**
+ * @brief Overloaded function to report the current state of the GPIO pins
+ * 
+ * This function is an overloaded version of the reportPinStates function.
+ * It calls the original reportPinStates function.
+ */
+
 void KlingShellClass::reportPinStates() {
     ::reportPinStates();
 }
@@ -149,6 +195,12 @@ KlingShellClass KlingShell;
 
 unsigned long bootTime;
 
+/**
+ * @brief Main setup function
+ * 
+ * This function initializes the serial communication, sets up the pins based on the chip model, generates the device ID,
+ * connects to the WiFi, retrieves the current time from an NTP server, and initializes the KlingShell library.
+ */
 void setup() {
     Serial.begin(115200);
     Serial.println("Booting");
@@ -188,7 +240,11 @@ void setup() {
     String formattedTime = timeClient.getFormattedTime();
     KlingShell.println("Current time: " + formattedTime);
 
-    // Set up OTA
+    /**
+     * @brief Function to set up Over-The-Air (OTA) updates
+     * 
+     * This function initializes the ArduinoOTA library and sets up the necessary callbacks for handling OTA updates.
+     */
     setupOTA();
 
     KlingShell.println("Ready");
@@ -196,10 +252,16 @@ void setup() {
     KlingShell.cprintln("[#13F700]" + ipStr);
 }
 
+/**
+ * @brief Main loop function
+ * 
+ * This function handles the Over-The-Air (OTA) updates and calls the KlingShell tick function.
+ * It also includes a delay to reduce the frequency of updates.
+ */
+
 void loop() {
     ArduinoOTA.handle();
     KlingShell.tick();
-
     delay(200); // Optional: Delay to reduce the frequency of updates
     
 }

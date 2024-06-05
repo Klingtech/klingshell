@@ -7,7 +7,7 @@ const { exec } = require('child_process');
 const pexec = util.promisify(exec);
 
 const port = 10000;
-const pathEndpoint = '/remoteserial';
+const pathEndpoint = '/KlingShell';
 const enableShellCommands = false;
 
 let consoleData = {};
@@ -127,7 +127,7 @@ const server = http.createServer(async (req, res) => {
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(`{"message": "Command queued for ${deviceId}"}`);
         });
-    } else if (req.method === 'GET' && parsedUrl.pathname === '/remoteserial/commands') {
+    } else if (req.method === 'GET' && parsedUrl.pathname === '/KlingShell/commands') {
         const { deviceId } = parsedUrl.query;
         console.log(`Checking for commands for ${deviceId}`);
         deviceLastContact[deviceId] = Date.now(); // Update last contact time
