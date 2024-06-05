@@ -38,3 +38,4 @@ compile_commands.json
 platformio.ini
 src/credentials.h
 data
+test
