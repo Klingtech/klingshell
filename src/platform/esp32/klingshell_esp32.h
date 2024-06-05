@@ -2,7 +2,8 @@
 
 #ifndef PLATFORM_ESP32_H
 #define PLATFORM_ESP32_H
-
+#include <esp_partition.h>
+#include <esp_chip_info.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ESPmDNS.h>

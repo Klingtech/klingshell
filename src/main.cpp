@@ -1,8 +1,6 @@
 #include <Arduino.h>
 #include <NTPClient.h>
 #include <Wire.h>
-#include <esp_partition.h>
-#include <esp_chip_info.h>
 
 #ifndef ESP8266
 #include "platform/esp32/KlingShell_esp32.h"
