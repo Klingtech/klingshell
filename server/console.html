@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Klingtech Shell</title>
+    <style>
+        body {
+            font-family: monospace;
+            background-color: black;
+            color: white;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .console-container {
+            display: flex;
+            flex-direction: row; /* Change this line */
+            overflow: hidden;
+            padding: 10px;
+            background-color: #1e1e1e;
+            border: 1px solid #444;
+            border-radius: 5px;
+            margin: 10px;
+            flex-grow: 1;
+            position: relative;
+        }
+        .console-output {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: #1e1e1e;
+            border-radius: 5px;
+            color: #d4d4d4;
+            display: flex;
+            flex-direction: column-reverse;
+            flex-grow: 1;
+            margin: 0 10px;
+            position: relative;
+        }
+        .console-output span {
+            white-space: pre-line;
+        }
+        .controls {
+            padding: 10px;
+            background-color: #333;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        .controls .buttons {
+            display: flex;
+        }
+        .controls button {
+            background-color: #555;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        .controls button:hover {
+            background-color: #777;
+        }
+        .tabs {
+            display: flex;
+            background-color: #444;
+            margin-right: 10px;
+        }
+        .tabs button {
+            background-color: #333;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            margin-right: 0px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            padding-right: 20px; /* Add padding to the right to create space for the close button */
+            padding-left: 10px; /* Add padding to the left to move the device text to the left */
+        }
+        .tabs button:hover {
+            background-color: #555;
+        }
+        .tabs button.active {
+            background-color: #222;
+        }
+        .tabs button .close {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background-color: red;
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 2px 5px;
+            z-index: 1; /* Ensure the close button is above the tab text */
+        }
+        .tab-content {
+            display: none;
+            height: 100%;
+        }
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+        .terminal-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 50px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 5px;
+        }
+        .terminal-controls button {
+            margin-top: 5px;
+            background-color: #555;
+            color: white;
+            border: none;
+            padding: 5px;
+            cursor: pointer;
+        }
+        .terminal-controls button:hover {
+            background-color: #777;
+        }
+        .device-list {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #333;
+            color: white;
+            padding: 10px;
+            border-left: 1px solid #444;
+            overflow-y: auto;
+            list-style-type: none;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .device-list h3 {
+            color: #ddd;
+            margin-top: 0;
+            padding-left: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+        }
+        .device-list a {
+            padding: 10px;
+            color: white;
+            text-decoration: none;
+            background-color: transparent;
+            border: none;
+            text-align: left;
+            padding-left: 20px;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .device-list a:hover {
+            background-color: #444;
+        }
+        .command-container {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background-color: #333;
+        }
+        .command-input {
+            display: flex;
+            margin-top: 10px;
+            flex: 1;
+            margin-right: 10px;
+        }
+        .command-input input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #444;
+            background-color: #1e1e1e;
+            color: white;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        .command-input button {
+            background-color: #555;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .command-input button:hover {
+            background-color: #777;
+        }
+
+        footer {
+            background-color: #333;
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #2e2e2e;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6e6e6e;
+        }
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #555 #2e2e2e;
+        }
+
+        .device-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 5px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            text-align: left;
+            z-index: 2;
+        }
+    </style>
+    <script>
+        let currentDevice = null;
+        let isPausedLeft = false;
+        let isPausedRight = false;
+        let fetchInterval;
+        let rightDevice = null;
+        let devices = [];
+        let deviceLastContact = {};
+        let showingDeviceList = false;
+        const disconnectTimeout = 5000;
+
+        async function fetchConsoleData() {
+            if (isPausedLeft && isPausedRight) return;
+
+            try {
+                const response = await fetch('/console');
+                const data = await response.json();
+                devices = Object.keys(data.consoleData);
+                deviceLastContact = data.deviceLastContact;
+
+                const leftOutput = document.getElementById('left-console-output');
+                const rightOutput = document.getElementById('right-console-output');
+                const rightDeviceHeader = document.getElementById('right-device-header');
+
+                if (!isPausedLeft) {
+                    updateConsoleOutput(leftOutput, data.consoleData[currentDevice]);
+                }
+
+                if (!isPausedRight && rightDevice) {
+                    rightDeviceHeader.innerText = `Selected Device: ${rightDevice}`;
+                    rightDeviceHeader.style.display = 'block'; // Ensure the header is visible
+                    updateConsoleOutput(rightOutput, data.consoleData[rightDevice]);
+                }
+
+                if (showingDeviceList) {
+                    rightDeviceHeader.style.display = 'none'; // Hide the header when the device list is shown
+                } else {
+                    rightDeviceHeader.style.display = 'block';
+                }
+
+                updateTabs(data.deviceLastContact);
+
+                const toggleButton = document.getElementById('toggle-new-window-button');
+                toggleButton.style.display = 'block';
+
+                // Toggle right command input visibility
+                document.getElementById('command-container-right').style.display = rightDevice ? 'flex' : 'none';
+            } catch (error) {
+                console.error('Error fetching console data:', error);
+            }
+        }
+
+        function updateConsoleOutput(consoleOutputElement, messages) {
+    consoleOutputElement.innerHTML = '';
+    if (messages) {
+        // Create a copy of messages and reverse the copy
+        const messagesCopy = [...messages].reverse(); // Using spread operator to clone and reverse
+        messagesCopy.forEach(line => {
+            const div = document.createElement('div');
+            div.innerHTML = line.replace(/\n/g, '<br>'); // Replace newline characters with <br> tags
+            consoleOutputElement.appendChild(div);
+        });
+        consoleOutputElement.scrollTop = consoleOutputElement.scrollHeight; // Scroll to the bottom
+    }
+}
+
+
+        function updateTabs(deviceLastContact) {
+            const tabsContainer = document.getElementById('tabs');
+            tabsContainer.innerHTML = '';
+            let firstDevice = null;
+
+            // Iterate over all devices in deviceLastContact
+            Object.keys(deviceLastContact).forEach(deviceId => {
+                if (!firstDevice) {
+                    firstDevice = deviceId;
+                }
+
+                const tabButton = document.createElement('button');
+                tabButton.innerText = deviceId;
+                tabButton.onclick = () => switchTab(deviceId);
+                tabButton.classList.add('tab-button');
+
+                if (deviceId === currentDevice) {
+                    tabButton.classList.add('active');
+                }
+
+                const lastContact = deviceLastContact[deviceId];
+                if (lastContact && (Date.now() - lastContact) > disconnectTimeout) {
+                    tabButton.style.backgroundColor = 'red';
+                } else {
+                    tabButton.style.backgroundColor = '';
+                }
+
+                const closeButton = document.createElement('button');
+                closeButton.innerText = 'x';
+                closeButton.classList.add('close');
+                closeButton.onclick = (event) => {
+                    event.stopPropagation();
+                    removeDevice(deviceId);
+                };
+
+                tabButton.appendChild(closeButton);
+                tabsContainer.appendChild(tabButton);
+            });
+
+            if (!currentDevice && firstDevice) {
+                switchTab(firstDevice);
+            }
+        }
+
+        function copyConsole(window) {
+            const outputId = window === 'left' ? 'left-console-output' : 'right-console-output';
+            const outputElement = document.getElementById(outputId);
+            const textToCopy = outputElement.innerText;
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                console.log('Text copied to clipboard');
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+            });
+        }
+
+function switchTab(deviceId) {
+    currentDevice = deviceId;
+    updateLeftHeader(); // Update the left header based on the tab selection
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tabs button').forEach(button => {
+        if (button.innerText.includes(deviceId)) {
+            button.classList.add('active');
+        } else {
+            button.classList.remove('active');
+        }
+    });
+    fetchConsoleData();
+}
+
+function updateLeftHeader() {
+    const leftDeviceHeader = document.getElementById('left-device-header');
+    if (currentDevice) {
+        leftDeviceHeader.innerText = `Selected Device: ${currentDevice}`;
+    } else {
+        leftDeviceHeader.innerText = 'No device selected';
+    }
+}
+
+
+        function togglePause(window) {
+            if (window === 'left') {
+                isPausedLeft = !isPausedLeft;
+                document.getElementById('pause-left-button').innerText = isPausedLeft ? 'Resume' : 'Pause';
+            } else if (window === 'right') {
+                isPausedRight = !isPausedRight;
+                document.getElementById('pause-right-button').innerText = isPausedRight ? 'Resume' : 'Pause';
+            }
+
+            if (!isPausedLeft || !isPausedRight) {
+                fetchConsoleData();
+                fetchInterval = setInterval(fetchConsoleData, 1000);
+            } else {
+                clearInterval(fetchInterval);
+            }
+        }
+
+        async function clearConsole(window) {
+            const deviceId = window === 'left' ? currentDevice : rightDevice;
+            if (deviceId) {
+                const response = await fetch('/clear', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ deviceId })
+                });
+                const result = await response.json();
+                alert(result.message);
+                fetchConsoleData();
+            }
+        }
+
+        async function sendCommand(device) {
+            const commandInput = document.getElementById(device === 'left' ? 'command-input-left' : 'command-input-right');
+            const command = commandInput.value;
+            const deviceId = device === 'left' ? currentDevice : rightDevice;
+
+            if (!command) {
+                alert('Please enter a command.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/command', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ deviceId, command })
+                });
+
+                const result = await response.json();
+                console.log(`Command sent to ${deviceId}: ${command}`);
+
+                // Clear the command input
+                commandInput.value = '';
+            } catch (error) {
+                console.error('Error sending command:', error);
+            }
+        }
+
+        function toggleNewWindow() {
+    const rightConsoleContainer = document.getElementById('right-console-container');
+    const rightDeviceHeader = document.getElementById('right-device-header');
+    if (rightConsoleContainer.style.display === 'none') {
+        showRightDeviceList();
+        rightDeviceHeader.style.display = 'none'; // Hide header when showing device list
+    } else {
+        rightConsoleContainer.style.display = 'none';
+        rightDevice = null;
+        showingDeviceList = false;
+        fetchConsoleData();
+    }
+}
+
+function showRightDeviceList() {
+    clearInterval(fetchInterval);
+    isPausedRight = true;
+    document.getElementById('pause-right-button').innerText = 'Resume';
+
+    const rightConsoleContainer = document.getElementById('right-console-container');
+    const rightConsole = document.getElementById('right-console-output');
+    rightConsole.innerHTML = '';
+    rightConsoleContainer.style.display = 'flex';
+
+    const deviceList = document.createElement('div');
+    deviceList.classList.add('device-list');
+
+    const listHeader = document.createElement('h3');
+    listHeader.textContent = 'Available devices:';
+    deviceList.appendChild(listHeader);
+
+    devices.forEach(device => {
+        const deviceLink = document.createElement('a');
+        deviceLink.innerText = device;
+        deviceLink.href = "#";
+        deviceLink.onclick = (event) => {
+            event.preventDefault();
+            selectRightDevice(device);
+        };
+        deviceList.appendChild(deviceLink);
+    });
+
+    rightConsole.appendChild(deviceList);
+    document.getElementById('right-device-header').style.display = 'none'; // Ensure the header is hidden
+}
+
+function selectRightDevice(deviceId) {
+    rightDevice = deviceId;
+    showingDeviceList = false;
+    isPausedRight = false;
+    document.getElementById('pause-right-button').innerText = 'Pause'; // Reset the text to "Pause" when a device is selected
+    document.getElementById('right-device-header').innerText = `Selected Device: ${rightDevice}`;
+    document.getElementById('right-device-header').style.display = 'block'; // Show header when device is selected
+    fetchConsoleData();
+    fetchInterval = setInterval(fetchConsoleData, 1000);
+}
+
+        function removeDevice(deviceId) {
+            fetch('/remove', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ deviceId })
+            }).then(response => response.json())
+            .then(data => {
+                if (data.message === 'Device removed') {
+                    fetchConsoleData();
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', (event) => {
+            fetchConsoleData();
+            fetchInterval = setInterval(fetchConsoleData, 1000);
+
+            const commandInputLeft = document.getElementById('command-input-left');
+            commandInputLeft.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter') {
+                    sendCommand('left');
+                }
+            });
+
+            const commandInputRight = document.getElementById('command-input-right');
+            commandInputRight.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter') {
+                    sendCommand('right');
+                }
+            });
+        });
+    </script>
+</head>
+<body>
+    <h1>Klingtech Shell</h1>
+    <div class="controls">
+        <div class="tabs" id="tabs"></div>
+        <div class="buttons">
+            <button id="toggle-new-window-button" onclick="toggleNewWindow()">Toggle New Window</button>
+        </div>
+    </div>
+    <div class="console-container" id="console-container">
+        <div id="left-console" class="console-output">
+            <div id="left-device-header" class="device-header"></div> <!-- Header for left console -->
+            <div id="left-console-output" class="console-output"></div>
+            <div class="terminal-controls">
+                <button id="pause-left-button" onclick="togglePause('left')">Pause</button>
+                <button onclick="copyConsole('left')">Copy all</button>
+                <button onclick="clearConsole('left')">Clear</button>
+            </div>
+        </div>
+        
+        <div id="right-console-container" class="console-output" style="display: none;">
+            <div id="right-device-header" class="device-header"></div> <!-- Added header for right console -->
+            <div id="right-console-output" class="console-output"></div>
+            <div class="terminal-controls">
+                <button id="pause-right-button" onclick="togglePause('right')">Pause</button>
+                <button onclick="clearConsole('right')">Clear</button>
+                <button onclick="copyConsole('right')">Copy all</button>
+                <button onclick="showRightDeviceList()">Back</button>
+            </div>
+        </div>
+    </div>
+    <div class="command-container">
+        <div class="command-input" id="command-container-left">
+            <input type="text" id="command-input-left" placeholder="Enter command for left device">
+            <button onclick="sendCommand('left')">Send Command</button>
+        </div>
+        <div class="command-input" id="command-container-right" style="display: none;">
+            <input type="text" id="command-input-right" placeholder="Enter command for right device">
+            <button onclick="sendCommand('right')">Send Command</button>
+        </div>
+    </div>
+    <footer>
+        Klingtech - IoT the fun way.
+    </footer>
+</body>
+</html>
