@@ -132,8 +132,8 @@ KlingShell requires a server running on port 80 to receive and send commands. Th
    - Connect your board to the computer.
    - Build and upload the firmware using PlatformIO.
 
-5. **Start a webbrowser and browse to your servers ip and port**
-   - 
+5. **Start a webbrowser and browse to your servers ip and port!**
+ 
 ### Usage
 
 Once the firmware is running on your ESP8266/ESP32 device, you can connect to it and execute various commands remotely through the KlingShell interface. This allows for easy testing, monitoring, and control of the device without the need for constant reflashing.
