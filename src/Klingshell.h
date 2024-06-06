@@ -31,6 +31,9 @@
 #include <Ticker.h>
 #endif
 
+extern std::vector<int> digitalPins;
+extern std::vector<int> analogPins;
+
 class KlingShellClass {
 private:
     struct QueueItem {
@@ -42,7 +45,7 @@ private:
             String output;
             output.reserve(input.length());
 
-            for (unsigned int i = 0; i < input.length(); i++) {  // Use unsigned int here
+            for (unsigned int i = 0; i < input.length(); i++) {  
                 switch (input[i]) {
                     case '\\': output += "\\\\"; break;
                     case '\"': output += "\\\""; break;
@@ -65,7 +68,7 @@ private:
             return output;
         }
 
-        String toJson() const {  // Define the toJson function
+        String toJson() const {
             return "{" + toJsonKeyValue("deviceId", deviceId) + toJsonKeyValue("payload", payload, false, true) + toJsonKeyValue("handler", handler, true) + "}";
         }
 
@@ -119,16 +122,15 @@ public:
                 flush();
             }
         }
-        checkForCommands(); // Check for commands from the server
+        checkForCommands();
 
-        // Perform pin tracing if enabled and interval has passed
         if (analogTracing && currentTime - lastAnalogTraceTime >= traceInterval) {
-            tracePins(true); // True for analog pins
+            tracePins(true);
             lastAnalogTraceTime = currentTime;
         }
 
         if (digitalTracing && currentTime - lastDigitalTraceTime >= traceInterval) {
-            tracePins(false); // False for digital pins
+            tracePins(false);
             lastDigitalTraceTime = currentTime;
         }
     }
@@ -203,9 +205,11 @@ public:
     void shell(String command) {
         queue.push_back(QueueItem(command, "shell", deviceId));
     }
-    
-    static void i2cscan(); // Declaration of the i2cscan function
-    static void reportPinStates(); // Declaration of the reportPinStates function
+
+    static void i2cscan();
+    void reportPinStates();
+    void startAnalogTracing(const String& pinList);
+    void startDigitalTracing(const String& pinList);
 
     void listFiles();
     void readFile(const String& path);
@@ -213,15 +217,13 @@ public:
     void deleteFile(const String& path);
     void scanWiFi();
     void setPWM(int pin, int dutyCycle);
-    void checkForCommands(); // Ensure this is declared here
+    void checkForCommands();
     String getSystemInfo();
     String getHelp();
     void tracePins(bool isAnalog);
-    void startAnalogTracing(const String& pinList);
-    void startDigitalTracing(const String& pinList);
-    void stopAnalogTracing();  // New function to stop analog tracing
-    void stopDigitalTracing(); // New function to stop digital tracing
-    float getBatteryPercentage(float maxVoltage, float resistor1, float resistor2, int pin); // Battery Percentage Calculation
+    void stopAnalogTracing();
+    void stopDigitalTracing();
+    float getBatteryPercentage(float maxVoltage, float resistor1, float resistor2, int pin);
 
 #ifndef ESP8266
     void playWav(int pin, const String& filename);

@@ -1,20 +1,17 @@
 #include "KlingShell.h"
 
-// Function to read and calculate battery percentage
 float KlingShellClass::getBatteryPercentage(float maxVoltage, float resistor1, float resistor2, int pin) {
 #ifdef ESP8266
     int raw = analogRead(A0);
-    float voltage = (raw / 1024.0) * 3.3; // assuming the max ADC voltage is 3.3V
+    float voltage = (raw / 1024.0) * 3.3;
     int millivolts = voltage * 1000;
 #else
     int millivolts = analogReadMilliVolts(pin);
 #endif
 
-    // Calculate voltage divider output based on resistor values
     float voltageDividerRatio = resistor2 / (resistor1 + resistor2);
     float batteryVoltage = millivolts / 1000.0 / voltageDividerRatio;
 
-    // Calculate percentage based on battery's voltage range
     float percentage = map(batteryVoltage, maxVoltage * 0.7, maxVoltage, 0, 100);
     percentage = constrain(percentage, 0, 100);
 
@@ -25,15 +22,12 @@ void KlingShellClass::i2cscan() {
     Wire.begin();
     byte error, address;
     int nDevices = 0;
-
-    // Collect all the output lines
     String output = "";
 
     for (address = 1; address < 127; ++address) {
         Wire.beginTransmission(address);
         error = Wire.endTransmission();
         if (error == 0) {
-            // If this is the first device found, print the header
             if (nDevices == 0) {
                 KlingShell.cprint("[#13F700]I2C devices found at the following addresses:");
             }
@@ -54,15 +48,12 @@ void KlingShellClass::i2cscan() {
         output += "Scan complete!";
     }
 
-    // Send the entire output at once
     KlingShell.cprint(output);
 
 #ifndef ESP8266
     Wire.end();
 #endif
 }
-
-// Define other member functions
 
 void KlingShellClass::listFiles() {
     if (!SPIFFS.begin()) {
@@ -77,7 +68,6 @@ void KlingShellClass::listFiles() {
 #endif
 
     File file = root.openNextFile();
-
     String fileList = "SPIFFS:";
     while (file) {
         fileList += "\n[#ffdd00]" + String(file.name()) + "[#]";
@@ -166,12 +156,32 @@ void KlingShellClass::scanWiFi() {
 
 void KlingShellClass::setPWM(int pin, int dutyCycle) {
 #ifndef ESP8266
-    ledcAttachPin(pin, 0); // Set pin as PWM
-    ledcSetup(0, 5000, 8); // 5kHz PWM, 8-bit resolution
+    ledcAttachPin(pin, 0);
+    ledcSetup(0, 5000, 8);
     ledcWrite(0, dutyCycle);
 #elif defined(ESP8266)
     analogWrite(pin, dutyCycle);
 #endif
+}
+
+void KlingShellClass::reportPinStates() {
+    String report;
+    report += "Digital Pin States:\n";
+    for (int pin : digitalPins) {
+        pinMode(pin, INPUT);
+        int pinState = digitalRead(pin);
+        report += "Pin " + String(pin) + ": " + String(pinState) + "\n";
+    }
+
+    report += "Analog Pin States:\n";
+    for (int pin : analogPins) {
+        pinMode(pin, INPUT);
+        int pinValue = analogRead(pin);
+        report += "Pin " + String(pin) + ": " + String(pinValue) + "\n";
+    }
+
+    report.trim();
+    KlingShell.println(report);
 }
 
 void KlingShellClass::startAnalogTracing(const String& pinList) {
@@ -229,33 +239,18 @@ String KlingShellClass::getSystemInfo() {
     String info;
 
 #ifndef ESP8266
-    // Get WiFi MAC address
     String wifiMac = WiFi.macAddress();
     info += "WiFi MAC Address: " + wifiMac + "\n";
-
-    // Get BLE MAC address
     uint8_t bleMac[6];
     esp_read_mac(bleMac, ESP_MAC_BT);
     char bleMacStr[18];
     sprintf(bleMacStr, "%02X:%02X:%02X:%02X:%02X:%02X", bleMac[0], bleMac[1], bleMac[2], bleMac[3], bleMac[4], bleMac[5]);
     info += "BLE MAC Address: " + String(bleMacStr) + "\n";
-
-    // Get CPU frequency
     info += "CPU Frequency: " + String(getCpuFrequencyMhz()) + " MHz\n";
-
-    // Get free heap size
     info += "Free Heap Size: " + String(ESP.getFreeHeap()) + " bytes\n";
-
-    // Get minimum free heap size since boot
     info += "Minimum Free Heap Size: " + String(ESP.getMinFreeHeap()) + " bytes\n";
-
-    // Get chip revision
     info += "Chip Revision: " + String(ESP.getChipRevision()) + "\n";
-
-    // Get SDK version
     info += "SDK Version: " + String(ESP.getSdkVersion()) + "\n";
-
-    // Get partition information
     const esp_partition_t* partition = esp_ota_get_running_partition();
     if (partition) {
         info += "Partition Type: " + String(partition->type) + "\n";
@@ -266,17 +261,10 @@ String KlingShellClass::getSystemInfo() {
         info += "No partition information available.\n";
     }
 #elif defined(ESP8266)
-    // Get WiFi MAC address
     String wifiMac = WiFi.macAddress();
     info += "WiFi MAC Address: " + wifiMac + "\n";
-
-    // Get CPU frequency
     info += "CPU Frequency: " + String(ESP.getCpuFreqMHz()) + " MHz\n";
-
-    // Get free heap size
     info += "Free Heap Size: " + String(ESP.getFreeHeap()) + " bytes\n";
-
-    // Get SDK version
     info += "SDK Version: " + String(ESP.getSdkVersion()) + "\n";
 #endif
 
@@ -316,7 +304,6 @@ String KlingShellClass::getHelp() {
   return help;
 }
 
-// Make sure the checkForCommands method is defined here
 void KlingShellClass::checkForCommands() {
     if (WiFi.status() == WL_CONNECTED) {
         HTTPClient http;
@@ -327,50 +314,51 @@ void KlingShellClass::checkForCommands() {
 
         if (httpResponseCode == 200) {
             String response = http.getString();
-            Serial.println(response); 
+            Serial.println(response);
 
-            // Parse response and execute commands
-            StaticJsonDocument<1024> doc;  // Updated to StaticJsonDocument
+            StaticJsonDocument<1024> doc;
             deserializeJson(doc, response);
             JsonArray commands = doc["commands"];
 
             for (JsonVariant command : commands) {
                 String cmd = command.as<String>();
-                Serial.println("Executing command: " + cmd);
                 String result;
 
-                // Interpret and execute the command
-                if (cmd.startsWith("ar")) { // Alias for analogRead
+                // Echo the received command
+                result = "Executed command: " + cmd;
+                KlingShell.println(result);
+
+                if (cmd.startsWith("ar")) {
                     int pin = cmd.substring(2).toInt();
                     int value = analogRead(pin);
                     result = "Analog pin " + String(pin) + " value: " + String(value);
-                } else if (cmd.startsWith("dr")) { // Alias for digitalRead
+                } else if (cmd.startsWith("dr")) {
                     int pin = cmd.substring(2).toInt();
                     int value = digitalRead(pin);
                     result = "Digital pin " + String(pin) + " value: " + String(value);
-                } else if (cmd == "i2c") { // Command for I2C scan
+                } else if (cmd == "i2c") {
                     i2cscan();
                     result = "Scanning for I2C devices...";
-                } else if (cmd == "ra") { // Command for reporting all pin states
+                } else if (cmd == "ra") {
                     reportPinStates();
                     result = "Reading all Pin States...";
-                } else if (cmd == "info") { // Command for system info
+                } else if (cmd == "info") {
                     result = getSystemInfo();
-                } else if (cmd == "lf") { // List files in SPIFFS
+                } else if (cmd == "lf") {
                     listFiles();
                     result = "Listing files...";
-                } else if (cmd == "reset") { // Reset device
+                } else if (cmd == "reset") {
 #ifndef ESP8266
                     esp_restart();
 #elif defined(ESP8266)
                     ESP.restart();
 #endif
-                    result = "Reseting device...";
-                } else if (cmd.startsWith("rf")) { // Read a specific file
+                    result = "Resetting device...";
+                } else if (cmd.startsWith("rf")) {
                     String path = cmd.substring(2);
                     readFile(path);
                     result = "Reading file: " + path;
-                } else if (cmd.startsWith("wf")) { // Write to a specific file
+                } else if (cmd.startsWith("wf")) {
                     int separator = cmd.indexOf('|');
                     if (separator != -1) {
                         String path = cmd.substring(2, separator);
@@ -380,10 +368,10 @@ void KlingShellClass::checkForCommands() {
                     } else {
                         result = "Invalid wf command format";
                     }
-                } else if (cmd.startsWith("wifi")) { // WiFi scanning
+                } else if (cmd.startsWith("wifi")) {
                     scanWiFi();
                     result = "Scanning for WiFi networks...";
-                } else if (cmd.startsWith("pwm")) { // Set PWM
+                } else if (cmd.startsWith("pwm")) {
                     int separator = cmd.indexOf('|');
                     if (separator != -1) {
                         int pin = cmd.substring(3, separator).toInt();
@@ -393,29 +381,28 @@ void KlingShellClass::checkForCommands() {
                     } else {
                         result = "Invalid pwm command format";
                     }
-                } else if (cmd.startsWith("df")) { // Delete a specific file
+                } else if (cmd.startsWith("df")) {
                     String path = cmd.substring(2);
                     deleteFile(path);
                     result = "Deleting file: " + path;
-                } else if (cmd == "help" || cmd == "?") { // Help command
+                } else if (cmd == "help" || cmd == "?") {
                     result = getHelp();
-                } else if (cmd.startsWith("tpa")) { // Tail pin analog
+                } else if (cmd.startsWith("tpa")) {
                     String pinList = cmd.substring(3);
                     if (pinList.startsWith(" stop")) {
                         stopAnalogTracing();
-                        result = "Stopped analog tracing";} 
-                    else {
-                    startAnalogTracing(pinList);
-                    result = "Started analog tracing for pins: " + pinList;
-                    } 
-                }   else if (cmd.startsWith("bat")) {
-                    // Parse parameters (if any) from the command
-                    float maxVoltage = 4.2; // Default values
+                        result = "Stopped analog tracing";
+                    } else {
+                        startAnalogTracing(pinList);
+                        result = "Started analog tracing for pins: " + pinList;
+                    }
+                } else if (cmd.startsWith("bat")) {
+                    float maxVoltage = 4.2;
                     float resistor1 = 220000;
                     float resistor2 = 220000;
-                    int pin = 14; // Default pin for ESP32
+                    int pin = 14;
 #ifdef ESP8266
-                    pin = A0; // Default pin for ESP8266
+                    pin = A0;
 #endif
 
                     int firstSeparator = cmd.indexOf('|');
@@ -435,21 +422,20 @@ void KlingShellClass::checkForCommands() {
                     }
                     float percentage = getBatteryPercentage(maxVoltage, resistor1, resistor2, pin);
                     result = "Battery Percentage: " + String(percentage) + "%";
-                } else if (cmd.startsWith("tpd")) { // Tail pin digital
-                String pinList = cmd.substring(3);
-                if (pinList.startsWith(" stop")) {
-                    stopDigitalTracing();
-                    result = "Stopped digital tracing";}
-                    else {
-                    startDigitalTracing(pinList);
-                    result = "Started digital tracing for pins: " + pinList;}
+                } else if (cmd.startsWith("tpd")) {
+                    String pinList = cmd.substring(3);
+                    if (pinList.startsWith(" stop")) {
+                        stopDigitalTracing();
+                        result = "Stopped digital tracing";
+                    } else {
+                        startDigitalTracing(pinList);
+                        result = "Started digital tracing for pins: " + pinList;
+                    }
                 } else {
                     result = "Unknown command: " + cmd;
                 }
 
                 Serial.println(result);
-
-                // Send the result back to the server
                 QueueItem queueItem(result, "cprintln", deviceId);
                 send(queueItem);
             }

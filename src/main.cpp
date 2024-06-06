@@ -4,7 +4,6 @@
 
 #ifndef ESP8266
 #include "platform/esp32/KlingShell_esp32.h"
-
 #elif defined(ESP8266)
 #include "platform/esp8266/KlingShell_esp8266.h"
 #endif
@@ -21,52 +20,8 @@
 // Comment out if not using credentials.h for above details
 #include "credentials.h"
 
-// Define the GPIO pins for different ESP32 models
-    // Define the GPIO pins for different ESP32/ESP8266 models
-    std::vector<int> digitalPins;
-    std::vector<int> analogPins;
-
-/**
- * @brief Function to set pins based on the chip model
- * 
- * This function uses the esp_chip_info library to determine the model of the ESP32 chip.
- * It then populates the digitalPins and analogPins vectors with the appropriate pins for the chip model.
- */
-#ifndef ESP8266
-void setPinsBasedOnChipModel() {
-    esp_chip_info_t chip_info;
-    esp_chip_info(&chip_info);
-
-    switch(chip_info.model) {
-        case CHIP_ESP32C3:
-            digitalPins = {2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 21};
-            analogPins = {2, 3, 4, 5};
-            break;
-        case CHIP_ESP32S3:
-            digitalPins = {1, 2, 3, 4, 5, 6, 7, 8, 9, 43, 44};
-            analogPins = {1, 2, 3, 4, 5, 6, 7, 8, 9};
-            break;
-        default:
-            digitalPins = {1, 2, 3, 4, 5, 6, 7, 8, 9, 43, 44};
-            analogPins = {1, 2, 3, 4, 5, 6, 7, 8, 9};
-            break;
-    }
-}
-#elif defined(ESP8266)
-void setPinsBasedOnChipModel() {
-    digitalPins = {0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16};
-    analogPins = {A0};
-}
-#endif
-
-/**
- * @brief Function to generate the device ID
- * 
- * This function uses the esp_chip_info library to determine the model and revision of the ESP32 chip.
- * It then retrieves the MAC address of the chip and formats it into a device ID string.
- * 
- * @return A string representing the device ID
- */
+std::vector<int> digitalPins;
+std::vector<int> analogPins;
 
 String getDeviceId() {
 #ifndef ESP8266
@@ -112,15 +67,6 @@ String getDeviceId() {
 #endif
 }
 
-/**
- * @brief Function to list the available GPIO pins
- * 
- * This function iterates through the digitalPins and analogPins vectors and checks the pin mode and availability.
- * It then constructs a string with information about each pin.
- * 
- * @return A string containing information about the available GPIO pins
- */
-
 String listPins() {
     String pinInfo = "Available GPIO Pins:\n";
     for (int pin : digitalPins) {
@@ -145,47 +91,6 @@ String listPins() {
     return pinInfo;
 }
 
-/**
- * @brief Function to report the current state of the GPIO pins
- * 
- * This function iterates through the digitalPins and analogPins vectors and reads the pin state or value.
- * It then constructs a string with information about the state of each pin.
- * 
- * @return A string containing information about the state of the GPIO pins
- */
-
-void reportPinStates() {
-    String report;
-
-    report += "Digital Pin States:\n";
-    for (int pin : digitalPins) {
-        pinMode(pin, INPUT);
-        int pinState = digitalRead(pin);
-        report += "Pin " + String(pin) + ": " + String(pinState) + "\n";
-    }
-
-    report += "Analog Pin States:\n";
-    for (int pin : analogPins) {
-        pinMode(pin, INPUT);
-        int pinValue = analogRead(pin);
-        report += "Pin " + String(pin) + ": " + String(pinValue) + "\n";
-    }
-
-    report.trim();
-    KlingShell.println(report);
-}
-
-/**
- * @brief Overloaded function to report the current state of the GPIO pins
- * 
- * This function is an overloaded version of the reportPinStates function.
- * It calls the original reportPinStates function.
- */
-
-void KlingShellClass::reportPinStates() {
-    ::reportPinStates();
-}
-
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", 3600 * 2);
 
@@ -193,26 +98,36 @@ KlingShellClass KlingShell;
 
 unsigned long bootTime;
 
-/**
- * @brief Main setup function
- * 
- * This function initializes the serial communication, sets up the pins based on the chip model, generates the device ID,
- * connects to the WiFi, retrieves the current time from an NTP server, and initializes the KlingShell library.
- */
 void setup() {
     Serial.begin(115200);
     Serial.println("Booting");
 
-    // Set the pins based on the chip model
-    setPinsBasedOnChipModel();
+    #ifndef ESP8266
+    esp_chip_info_t chip_info;
+    esp_chip_info(&chip_info);
+
+    if (chip_info.model == CHIP_ESP32C3) {
+        digitalPins = {2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 21};
+        analogPins = {2, 3, 4, 5};
+    } 
+    else if (chip_info.model == CHIP_ESP32S3) {
+        digitalPins = {1, 2, 3, 4, 5, 6, 7, 8, 9, 43, 44};
+        analogPins = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+    } 
+    else {
+        digitalPins = {1, 2, 3, 4, 5, 6, 7, 8, 9, 43, 44};
+        analogPins = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+    }
+    #elif defined(ESP8266)
+    digitalPins = {0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16};
+    analogPins = {A0};
+    #endif
+
     #ifdef ESP8266
     pinMode(A0, INPUT);
     #endif
-    // Generate the device ID
-    String deviceId = getDeviceId();
 
-    // Connect to WiFi
-    setPinsBasedOnChipModel();
+    String deviceId = getDeviceId();
 
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
@@ -239,11 +154,6 @@ void setup() {
     String formattedTime = timeClient.getFormattedTime();
     KlingShell.println("Current time: " + formattedTime);
 
-    /**
-     * @brief Function to set up Over-The-Air (OTA) updates
-     * 
-     * This function initializes the ArduinoOTA library and sets up the necessary callbacks for handling OTA updates.
-     */
     setupOTA();
 
     KlingShell.println("Ready");
@@ -251,16 +161,8 @@ void setup() {
     KlingShell.cprintln("[#13F700]" + ipStr);
 }
 
-/**
- * @brief Main loop function
- * 
- * This function handles the Over-The-Air (OTA) updates and calls the KlingShell tick function.
- * It also includes a delay to reduce the frequency of updates.
- */
-
 void loop() {
     ArduinoOTA.handle();
     KlingShell.tick();
-    delay(200); // Optional: Delay to reduce the frequency of updates
-    
+    delay(200);
 }
