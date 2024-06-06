@@ -219,6 +219,7 @@ public:
     void setPWM(int pin, int dutyCycle);
     void checkForCommands();
     String getSystemInfo();
+    String getIpConfiguration(); // Add this function to return IP configuration
     String getHelp();
     void tracePins(bool isAnalog);
     void stopAnalogTracing();

@@ -282,7 +282,7 @@ String KlingShellClass::getHelp() {
   help += "  tpa stop      - Stop analog tracing\n";
   help += "  tpd<pins>     - Trace digital values continuously (e.g., 'tpd 0,12')\n";
   help += "  tpd stop      - Stop digital tracing\n";
-  help += "  ra            - Report ALL current pin states (analog & digital)\n";
+  help += "  ra            - Report ALL current pin states (analog & digital) Define these in main.cpp to suit your board. Else it might crash and reboot.\n";
   
   help += "\nFile System (SPIFFS):\n";
   help += "  lf            - List files stored on the device\n";
@@ -294,6 +294,7 @@ String KlingShellClass::getHelp() {
   help += "  i2c           - Scan for I2C devices on the bus\n";
   help += "  wifi          - Scan for available Wi-Fi networks\n";
   help += "  info          - Get detailed system information (CPU, memory, etc.)\n";
+  help += "  ip            - Display the IP configuration of the device\n";
   help += "  bat           - Display the battery percentage assuming pin A0 on ESP8266 or GPIO14 for ESP32 with 3.3v and 220k resistors.\n";
   help += "  bat|<pin#>|<maxV>|<R1>|<R2> - Customize battery reading with battery voltage and the resistance of resistor 1 and 2 (e.g., 'bat|14|4.2|220000|220000')\n";
 
@@ -431,7 +432,10 @@ void KlingShellClass::checkForCommands() {
                         startDigitalTracing(pinList);
                         result = "Started digital tracing for pins: " + pinList;
                     }
-                } else {
+                } else if (cmd == "ip") {
+                    // Display IP configuration
+                    result = getIpConfiguration();
+                }else {
                     result = "Unknown command: " + cmd;
                 }
 
@@ -446,4 +450,19 @@ void KlingShellClass::checkForCommands() {
 
         http.end();
     }
+}
+
+String KlingShellClass::getIpConfiguration() {
+    IPAddress localIp = WiFi.localIP();
+    IPAddress subnetMask = WiFi.subnetMask();
+    IPAddress gatewayIp = WiFi.gatewayIP();
+    IPAddress dnsIp = WiFi.dnsIP();
+
+    String ipInfo = "IP Configuration:\n";
+    ipInfo += "Local IP: " + localIp.toString() + "\n";
+    ipInfo += "Subnet Mask: " + subnetMask.toString() + "\n";
+    ipInfo += "Gateway IP: " + gatewayIp.toString() + "\n";
+    ipInfo += "DNS IP: " + dnsIp.toString() + "\n";
+
+    return ipInfo;
 }
