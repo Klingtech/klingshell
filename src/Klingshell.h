@@ -31,19 +31,18 @@
 #include <Ticker.h>
 #endif
 
-
 class KlingShellClass {
 private:
     struct QueueItem {
-        String toJsonKeyValue(String key, String value, bool isEnd = false, bool flagSanitize = false) {
+        String toJsonKeyValue(String key, String value, bool isEnd = false, bool flagSanitize = false) const {
             return "\"" + key + "\": \"" + (flagSanitize ? toJsonSanitizedValue(value) : value) + "\"" + (isEnd ? "" : ", ");
         }
 
-        String toJsonSanitizedValue(const String &input) {
+        String toJsonSanitizedValue(const String &input) const {
             String output;
             output.reserve(input.length());
 
-            for (int i = 0; i < input.length(); i++) {
+            for (unsigned int i = 0; i < input.length(); i++) {  // Use unsigned int here
                 switch (input[i]) {
                     case '\\': output += "\\\\"; break;
                     case '\"': output += "\\\""; break;
@@ -66,16 +65,16 @@ private:
             return output;
         }
 
+        String toJson() const {  // Define the toJson function
+            return "{" + toJsonKeyValue("deviceId", deviceId) + toJsonKeyValue("payload", payload, false, true) + toJsonKeyValue("handler", handler, true) + "}";
+        }
+
     public:
         String payload;
         String handler;
         String deviceId;
 
-        QueueItem(String payload, String handler, String deviceId) : handler(handler), payload(payload), deviceId(deviceId) {}
-
-        String toJson() {
-            return "{" + toJsonKeyValue("deviceId", deviceId) + toJsonKeyValue("payload", payload, false, true) + toJsonKeyValue("handler", handler, true) + "}";
-        }
+        QueueItem(String payload, String handler, String deviceId) : payload(payload), handler(handler), deviceId(deviceId) {}
     };
 
     String url;
@@ -220,7 +219,7 @@ public:
     void deleteFile(const String& path);
     void scanWiFi();
     void setPWM(int pin, int dutyCycle);
-    void checkForCommands();
+    void checkForCommands(); // Ensure this is declared here
     String getSystemInfo();
     String getHelp();
     void tracePins(bool isAnalog);
@@ -228,7 +227,7 @@ public:
     void startDigitalTracing(const String& pinList);
     void stopAnalogTracing();  // New function to stop analog tracing
     void stopDigitalTracing(); // New function to stop digital tracing
-     float getBatteryPercentage(float maxVoltage, float resistor1, float resistor2); // Battery Percentage Calculation
+    float getBatteryPercentage(float maxVoltage, float resistor1, float resistor2); // Battery Percentage Calculation
 
 #ifndef ESP8266
     void playWav(int pin, const String& filename);

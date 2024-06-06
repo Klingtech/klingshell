@@ -1,6 +1,26 @@
 #include "KlingShell.h"
 
- // Make the function accessible to the KlingShellClass
+// Function to read and calculate battery percentage
+float KlingShellClass::getBatteryPercentage(float maxVoltage, float resistor1, float resistor2) {
+#ifdef ESP8266
+    int raw = analogRead(A0);
+    float voltage = (raw / 1024.0) * 3.3; // assuming the max ADC voltage is 3.3V
+    int millivolts = voltage * 1000;
+#else
+    int millivolts = analogReadMilliVolts(A0);
+#endif
+
+    // Calculate voltage divider output based on resistor values
+    float voltageDividerRatio = resistor2 / (resistor1 + resistor2);
+    float batteryVoltage = millivolts / 1000.0 / voltageDividerRatio;
+
+    // Calculate percentage based on battery's voltage range
+    float percentage = map(batteryVoltage, maxVoltage * 0.7, maxVoltage, 0, 100);
+    percentage = constrain(percentage, 0, 100);
+
+    return percentage;
+}
+
 void KlingShellClass::i2cscan() {
     Wire.begin();
     byte error, address;
@@ -37,29 +57,13 @@ void KlingShellClass::i2cscan() {
     // Send the entire output at once
     KlingShell.cprint(output);
 
-    Wire.end();
-}
-
-
-
-String getFlashSize() {
-    // Get flash size
-    esp_chip_info_t chip_info;
-    esp_chip_info(&chip_info);
-
-    switch (chip_info.features & CHIP_FEATURE_EMB_FLASH) {
-        case 0:
-            return "External Flash";
-        default:
-            return "Embedded Flash";
-    }
-}
-
 #ifndef ESP8266
-/* #include <AudioGeneratorWAV.h>
-#include <AudioFileSourceSPIFFS.h>
-#include <AudioOutputI2S.h> */
+    Wire.end();
 #endif
+}
+
+// Define other member functions
+
 void KlingShellClass::listFiles() {
     if (!SPIFFS.begin()) {
         cprintln("SPIFFS Mount Failed");
@@ -170,6 +174,149 @@ void KlingShellClass::setPWM(int pin, int dutyCycle) {
 #endif
 }
 
+void KlingShellClass::startAnalogTracing(const String& pinList) {
+    tracedAnalogPins.clear();
+    analogTracing = true;
+    int start = 0;
+    int end = pinList.indexOf(',');
+    while (end != -1) {
+        tracedAnalogPins.push_back(pinList.substring(start, end).toInt());
+        start = end + 1;
+        end = pinList.indexOf(',', start);
+    }
+    tracedAnalogPins.push_back(pinList.substring(start).toInt());
+}
+
+void KlingShellClass::startDigitalTracing(const String& pinList) {
+    tracedDigitalPins.clear();
+    digitalTracing = true;
+    int start = 0;
+    int end = pinList.indexOf(',');
+    while (end != -1) {
+        tracedDigitalPins.push_back(pinList.substring(start, end).toInt());
+        start = end + 1;
+        end = pinList.indexOf(',', start);
+    }
+    tracedDigitalPins.push_back(pinList.substring(start).toInt());
+}
+
+void KlingShellClass::tracePins(bool isAnalog) {
+    if (isAnalog && analogTracing) {
+        for (int pin : tracedAnalogPins) {
+            int value = analogRead(pin);
+            cprintln("Analog pin " + String(pin) + ": " + String(value));
+        }
+    }
+    if (!isAnalog && digitalTracing) {
+        for (int pin : tracedDigitalPins) {
+            int value = digitalRead(pin);
+            cprintln("Digital pin " + String(pin) + ": " + String(value));
+        }
+    }
+}
+
+void KlingShellClass::stopAnalogTracing() {
+    analogTracing = false;
+    tracedAnalogPins.clear();
+}
+
+void KlingShellClass::stopDigitalTracing() {
+    digitalTracing = false;
+    tracedDigitalPins.clear();
+}
+
+String KlingShellClass::getSystemInfo() {
+    String info;
+
+#ifndef ESP8266
+    // Get WiFi MAC address
+    String wifiMac = WiFi.macAddress();
+    info += "WiFi MAC Address: " + wifiMac + "\n";
+
+    // Get BLE MAC address
+    uint8_t bleMac[6];
+    esp_read_mac(bleMac, ESP_MAC_BT);
+    char bleMacStr[18];
+    sprintf(bleMacStr, "%02X:%02X:%02X:%02X:%02X:%02X", bleMac[0], bleMac[1], bleMac[2], bleMac[3], bleMac[4], bleMac[5]);
+    info += "BLE MAC Address: " + String(bleMacStr) + "\n";
+
+    // Get CPU frequency
+    info += "CPU Frequency: " + String(getCpuFrequencyMhz()) + " MHz\n";
+
+    // Get free heap size
+    info += "Free Heap Size: " + String(ESP.getFreeHeap()) + " bytes\n";
+
+    // Get minimum free heap size since boot
+    info += "Minimum Free Heap Size: " + String(ESP.getMinFreeHeap()) + " bytes\n";
+
+    // Get chip revision
+    info += "Chip Revision: " + String(ESP.getChipRevision()) + "\n";
+
+    // Get SDK version
+    info += "SDK Version: " + String(ESP.getSdkVersion()) + "\n";
+
+    // Get partition information
+    const esp_partition_t* partition = esp_ota_get_running_partition();
+    if (partition) {
+        info += "Partition Type: " + String(partition->type) + "\n";
+        info += "Partition Subtype: " + String(partition->subtype) + "\n";
+        info += "Partition Size: " + String(partition->size) + " bytes\n";
+        info += "Partition Label: " + String(partition->label);
+    } else {
+        info += "No partition information available.\n";
+    }
+#elif defined(ESP8266)
+    // Get WiFi MAC address
+    String wifiMac = WiFi.macAddress();
+    info += "WiFi MAC Address: " + wifiMac + "\n";
+
+    // Get CPU frequency
+    info += "CPU Frequency: " + String(ESP.getCpuFreqMHz()) + " MHz\n";
+
+    // Get free heap size
+    info += "Free Heap Size: " + String(ESP.getFreeHeap()) + " bytes\n";
+
+    // Get SDK version
+    info += "SDK Version: " + String(ESP.getSdkVersion()) + "\n";
+#endif
+
+    return info;
+}
+
+String KlingShellClass::getHelp() {
+  String help = "---------------------------------------------------------------------------\n";
+  help += "Available Commands (case-insensitive):\n";
+  help += "\nPin Control:\n";
+  help += "  ar<pin#>      - Read analog value from pin (e.g., 'ar32')\n";
+  help += "  dr<pin#>      - Read digital value (HIGH/LOW) from pin (e.g., 'dr13')\n";
+  help += "  pwm<pin#>|<duty> - Set PWM duty cycle (0-255) on pin (e.g., 'pwm23|128')\n";
+  help += "  tpa<pins>     - Trace analog values continuously (e.g., 'tpa 32,33')\n";
+  help += "  tpa stop      - Stop analog tracing\n";
+  help += "  tpd<pins>     - Trace digital values continuously (e.g., 'tpd 0,12')\n";
+  help += "  tpd stop      - Stop digital tracing\n";
+  help += "  ra            - Report ALL current pin states (analog & digital)\n";
+  
+  help += "\nFile System (SPIFFS):\n";
+  help += "  lf            - List files stored on the device\n";
+  help += "  rf<path>      - Read contents of a file (e.g., 'rf/data.txt')\n";
+  help += "  wf<path>|<data>- Write data to a file (e.g., 'wf/log.txt|Hello!')\n";
+  help += "  df<path>      - Delete a file (e.g., 'df/old.log')\n";
+
+  help += "\nDiagnostics & Information:\n";
+  help += "  i2c           - Scan for I2C devices on the bus\n";
+  help += "  wifi          - Scan for available Wi-Fi networks\n";
+  help += "  info          - Get detailed system information (CPU, memory, etc.)\n";
+  help += "  bat           - Display the battery percentage (if applicable)\n";
+  help += "  bat|<maxV>|<R1>|<R2> - Customize battery reading (e.g., 'bat|3.7|220000|220000')\n";
+
+  help += "\nOther:\n";
+  help += "  reset         - Restart the device\n";
+  help += "  help or ?     - Show this help message\n";
+  help += "---------------------------------------------------------------------------\n";
+  return help;
+}
+
+// Make sure the checkForCommands method is defined here
 void KlingShellClass::checkForCommands() {
     if (WiFi.status() == WL_CONNECTED) {
         HTTPClient http;
@@ -304,192 +451,3 @@ void KlingShellClass::checkForCommands() {
         http.end();
     }
 }
-
-// Function to read and calculate battery percentage
-float getBatteryPercentage() {
-  int millivolts = analogReadMilliVolts(A0) * 2;  
-  float voltage = millivolts / 1000.0; 
-  float percentage = map(voltage, 3.0, 4.2, 0, 100);
-
-  // Ensure percentage stays within 0-100% range
-  percentage = constrain(percentage, 0, 100);
-
-  return percentage;
-}
-String KlingShellClass::getSystemInfo() {
-    String info;
-
-#ifndef ESP8266
-    // Get WiFi MAC address
-    String wifiMac = WiFi.macAddress();
-    info += "WiFi MAC Address: " + wifiMac + "\n";
-
-    // Get BLE MAC address
-    uint8_t bleMac[6];
-    esp_read_mac(bleMac, ESP_MAC_BT);
-    char bleMacStr[18];
-    sprintf(bleMacStr, "%02X:%02X:%02X:%02X:%02X:%02X", bleMac[0], bleMac[1], bleMac[2], bleMac[3], bleMac[4], bleMac[5]);
-    info += "BLE MAC Address: " + String(bleMacStr) + "\n";
-
-    // Get CPU frequency
-    info += "CPU Frequency: " + String(getCpuFrequencyMhz()) + " MHz\n";
-
-    // Get free heap size
-    info += "Free Heap Size: " + String(ESP.getFreeHeap()) + " bytes\n";
-
-    // Get minimum free heap size since boot
-    info += "Minimum Free Heap Size: " + String(ESP.getMinFreeHeap()) + " bytes\n";
-
-    // Get chip revision
-    info += "Chip Revision: " + String(ESP.getChipRevision()) + "\n";
-
-    // Get SDK version
-    info += "SDK Version: " + String(ESP.getSdkVersion()) + "\n";
-
-    // Get partition information
-    const esp_partition_t* partition = esp_ota_get_running_partition();
-    if (partition) {
-        info += "Partition Type: " + String(partition->type) + "\n";
-        info += "Partition Subtype: " + String(partition->subtype) + "\n";
-        info += "Partition Size: " + String(partition->size) + " bytes\n";
-        info += "Partition Label: " + String(partition->label);
-    } else {
-        info += "No partition information available.\n";
-    }
-#elif defined(ESP8266)
-    // Get WiFi MAC address
-    String wifiMac = WiFi.macAddress();
-    info += "WiFi MAC Address: " + wifiMac + "\n";
-
-    // Get CPU frequency
-    info += "CPU Frequency: " + String(ESP.getCpuFreqMHz()) + " MHz\n";
-
-    // Get free heap size
-    info += "Free Heap Size: " + String(ESP.getFreeHeap()) + " bytes\n";
-
-    // Get SDK version
-    info += "SDK Version: " + String(ESP.getSdkVersion()) + "\n";
-#endif
-
-    return info;
-}
-
-String KlingShellClass::getHelp() {
-  String help = "---------------------------------------------------------------------------\n";
-  help += "Available Commands (case-insensitive):\n";
-  help += "\nPin Control:\n";
-  help += "  ar<pin#>      - Read analog value from pin (e.g., 'ar32')\n";
-  help += "  dr<pin#>      - Read digital value (HIGH/LOW) from pin (e.g., 'dr13')\n";
-  help += "  pwm<pin#>|<duty> - Set PWM duty cycle (0-255) on pin (e.g., 'pwm23|128')\n";
-  help += "  tpa<pins>     - Trace analog values continuously (e.g., 'tpa 32,33')\n";
-  help += "  tpa stop      - Stop analog tracing\n";
-  help += "  tpd<pins>     - Trace digital values continuously (e.g., 'tpd 0,12')\n";
-  help += "  tpd stop      - Stop digital tracing\n";
-  help += "  ra            - Report ALL current pin states (analog & digital)\n";
-  
-  help += "\nFile System (SPIFFS):\n";
-  help += "  lf            - List files stored on the device\n";
-  help += "  rf<path>      - Read contents of a file (e.g., 'rf/data.txt')\n";
-  help += "  wf<path>|<data>- Write data to a file (e.g., 'wf/log.txt|Hello!')\n";
-  help += "  df<path>      - Delete a file (e.g., 'df/old.log')\n";
-
-  help += "\nDiagnostics & Information:\n";
-  help += "  i2c           - Scan for I2C devices on the bus\n";
-  help += "  wifi          - Scan for available Wi-Fi networks\n";
-  help += "  info          - Get detailed system information (CPU, memory, etc.)\n";
-  help += "  bat           - Display the battery percentage (if applicable)\n";
-  help += "  bat|<maxV>|<R1>|<R2> - Customize battery reading (e.g., 'bat|3.7|220000|220000')\n";
-
-  help += "\nOther:\n";
-  help += "  reset         - Restart the device\n";
-  help += "  help or ?     - Show this help message\n";
-  help += "---------------------------------------------------------------------------\n";
-  return help;
-}
-void KlingShellClass::startAnalogTracing(const String& pinList) {
-    tracedAnalogPins.clear();
-    analogTracing = true;
-    int start = 0;
-    int end = pinList.indexOf(',');
-    while (end != -1) {
-        tracedAnalogPins.push_back(pinList.substring(start, end).toInt());
-        start = end + 1;
-        end = pinList.indexOf(',', start);
-    }
-    tracedAnalogPins.push_back(pinList.substring(start).toInt());
-}
-
-void KlingShellClass::startDigitalTracing(const String& pinList) {
-    tracedDigitalPins.clear();
-    digitalTracing = true;
-    int start = 0;
-    int end = pinList.indexOf(',');
-    while (end != -1) {
-        tracedDigitalPins.push_back(pinList.substring(start, end).toInt());
-        start = end + 1;
-        end = pinList.indexOf(',', start);
-    }
-    tracedDigitalPins.push_back(pinList.substring(start).toInt());
-}
-
-void KlingShellClass::tracePins(bool isAnalog) {
-    if (isAnalog && analogTracing) {
-        for (int pin : tracedAnalogPins) {
-            int value = analogRead(pin);
-            cprintln("Analog pin " + String(pin) + ": " + String(value));
-        }
-    }
-    if (!isAnalog && digitalTracing) {
-        for (int pin : tracedDigitalPins) {
-            int value = digitalRead(pin);
-            cprintln("Digital pin " + String(pin) + ": " + String(value));
-        }
-    }
-}
-float KlingShellClass::getBatteryPercentage(float maxVoltage, float resistor1, float resistor2) {
-  int millivolts = analogReadMilliVolts(A0); 
-
-  // Calculate voltage divider output based on resistor values
-  float voltageDividerRatio = resistor2 / (resistor1 + resistor2);
-  float batteryVoltage = millivolts / 1000.0 / voltageDividerRatio;
-
-  // Calculate percentage based on battery's voltage range
-  float percentage = map(batteryVoltage, maxVoltage * 0.7, maxVoltage, 0, 100);
-  percentage = constrain(percentage, 0, 100);
-
-  return percentage;
-}
-
-void KlingShellClass::stopAnalogTracing() {
-    analogTracing = false;
-    tracedAnalogPins.clear();
-}
-
-void KlingShellClass::stopDigitalTracing() {
-    digitalTracing = false;
-    tracedDigitalPins.clear();
-}
-
-#ifndef ESP8266
-/* void KlingShellClass::playWav(int pin, const String& filename) {
-    if (!SPIFFS.begin()) {
-        cprintln("SPIFFS Mount Failed");
-        return;
-    }
-
-    file = new AudioFileSourceSPIFFS(filename.c_str());
-    out = new AudioOutputI2S();
-    wav = new AudioGeneratorWAV();
-    wav->begin(file, out);
-
-    while (wav->isRunning()) {
-        if (!wav->loop()) wav->stop();
-    }
-
-    delete wav;
-    delete file;
-    delete out;
-
-    SPIFFS.end();
-} */
-#endif

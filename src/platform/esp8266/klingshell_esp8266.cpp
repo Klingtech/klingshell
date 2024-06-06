@@ -1,4 +1,4 @@
-#if defined(ESP8266)
+#ifdef ESP8266
 #include "KlingShell_esp8266.h"
 
 void setupOTA() {
@@ -11,12 +11,15 @@ void setupOTA() {
         }
         Serial.println("Start updating " + type);
     });
+
     ArduinoOTA.onEnd([]() {
         Serial.println("\nEnd");
     });
+
     ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
         Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
     });
+
     ArduinoOTA.onError([](ota_error_t error) {
         Serial.printf("Error[%u]: ", error);
         if (error == OTA_AUTH_ERROR) {
