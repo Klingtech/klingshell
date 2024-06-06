@@ -1,13 +1,13 @@
 #include "KlingShell.h"
 
 // Function to read and calculate battery percentage
-float KlingShellClass::getBatteryPercentage(float maxVoltage, float resistor1, float resistor2) {
+float KlingShellClass::getBatteryPercentage(float maxVoltage, float resistor1, float resistor2, int pin) {
 #ifdef ESP8266
     int raw = analogRead(A0);
     float voltage = (raw / 1024.0) * 3.3; // assuming the max ADC voltage is 3.3V
     int millivolts = voltage * 1000;
 #else
-    int millivolts = analogReadMilliVolts(A0);
+    int millivolts = analogReadMilliVolts(pin);
 #endif
 
     // Calculate voltage divider output based on resistor values
@@ -306,8 +306,8 @@ String KlingShellClass::getHelp() {
   help += "  i2c           - Scan for I2C devices on the bus\n";
   help += "  wifi          - Scan for available Wi-Fi networks\n";
   help += "  info          - Get detailed system information (CPU, memory, etc.)\n";
-  help += "  bat           - Display the battery percentage (if applicable)\n";
-  help += "  bat|<maxV>|<R1>|<R2> - Customize battery reading (e.g., 'bat|3.7|220000|220000')\n";
+  help += "  bat           - Display the battery percentage assuming pin A0 on ESP8266 or GPIO14 for ESP32 with 3.3v and 220k resistors.\n";
+  help += "  bat|<pin#>|<maxV>|<R1>|<R2> - Customize battery reading with battery voltage and the resistance of resistor 1 and 2 (e.g., 'bat|14|4.2|220000|220000')\n";
 
   help += "\nOther:\n";
   help += "  reset         - Restart the device\n";
@@ -413,17 +413,27 @@ void KlingShellClass::checkForCommands() {
                     float maxVoltage = 4.2; // Default values
                     float resistor1 = 220000;
                     float resistor2 = 220000;
+                    int pin = 14; // Default pin for ESP32
+#ifdef ESP8266
+                    pin = A0; // Default pin for ESP8266
+#endif
 
                     int firstSeparator = cmd.indexOf('|');
                     if (firstSeparator != -1) {
-                        maxVoltage = cmd.substring(4, firstSeparator).toFloat();
+                        pin = cmd.substring(4, firstSeparator).toInt();
                         int secondSeparator = cmd.indexOf('|', firstSeparator + 1);
-                    if (secondSeparator != -1) {
-                        resistor1 = cmd.substring(firstSeparator + 1, secondSeparator).toFloat();
-                        resistor2 = cmd.substring(secondSeparator + 1).toFloat();
+                        if (secondSeparator != -1) {
+                            maxVoltage = cmd.substring(firstSeparator + 1, secondSeparator).toFloat();
+                            int thirdSeparator = cmd.indexOf('|', secondSeparator + 1);
+                            if (thirdSeparator != -1) {
+                                resistor1 = cmd.substring(secondSeparator + 1, thirdSeparator).toFloat();
+                                resistor2 = cmd.substring(thirdSeparator + 1).toFloat();
+                            } else {
+                                resistor2 = cmd.substring(secondSeparator + 1).toFloat();
+                            }
                         }
                     }
-                    float percentage = getBatteryPercentage(maxVoltage, resistor1, resistor2);
+                    float percentage = getBatteryPercentage(maxVoltage, resistor1, resistor2, pin);
                     result = "Battery Percentage: " + String(percentage) + "%";
                 } else if (cmd.startsWith("tpd")) { // Tail pin digital
                 String pinList = cmd.substring(3);

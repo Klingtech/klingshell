@@ -92,12 +92,6 @@ private:
     unsigned long lastAnalogTraceTime = 0;
     unsigned long lastDigitalTraceTime = 0;
     const unsigned long traceInterval = 1000; // 1 second
-/* 
-#ifndef ESP8266
-    AudioGeneratorWAV *wav = nullptr;
-    AudioFileSourceSPIFFS *file = nullptr;
-    AudioOutputI2S *out = nullptr;
-#endif */
 
 public:
     KlingShellClass() : url(""), lastFlushed(clock() + 5000), lastFailed(false), deviceId("UnknownDevice") {}
@@ -227,7 +221,7 @@ public:
     void startDigitalTracing(const String& pinList);
     void stopAnalogTracing();  // New function to stop analog tracing
     void stopDigitalTracing(); // New function to stop digital tracing
-    float getBatteryPercentage(float maxVoltage, float resistor1, float resistor2); // Battery Percentage Calculation
+    float getBatteryPercentage(float maxVoltage, float resistor1, float resistor2, int pin); // Battery Percentage Calculation
 
 #ifndef ESP8266
     void playWav(int pin, const String& filename);

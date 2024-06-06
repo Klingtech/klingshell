@@ -205,8 +205,9 @@ void setup() {
 
     // Set the pins based on the chip model
     setPinsBasedOnChipModel();
+    #ifdef ESP8266
     pinMode(A0, INPUT);
-
+    #endif
     // Generate the device ID
     String deviceId = getDeviceId();
 
