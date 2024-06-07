@@ -24,6 +24,33 @@ KlingShell is a comprehensive firmware solution designed for ESP8266 and ESP32 m
 
 KlingShell requires a server running on port 80 to receive and send commands. This server can be run using Node.js. The server files are located in the `/server` folder, and the main file to start the server is `server.js`.
 
+## Dependencies
+
+### Common Libraries
+
+- [ArduinoJson](https://github.com/bblanchon/ArduinoJson)
+- [NTPClient](https://github.com/arduino-libraries/NTPClient)
+- [Wire](https://www.arduino.cc/en/Reference/Wire)
+
+### ESP32 Specific Libraries
+
+- [WiFi](https://github.com/espressif/arduino-esp32/tree/master/libraries/WiFi)
+- [ArduinoOTA](https://github.com/espressif/arduino-esp32/tree/master/libraries/ArduinoOTA)
+- [ESPmDNS](https://github.com/espressif/arduino-esp32/tree/master/libraries/ESPmDNS)
+- [HTTPClient](https://github.com/espressif/arduino-esp32/tree/master/libraries/HTTPClient)
+- [WiFiClientSecure](https://github.com/espressif/arduino-esp32/tree/master/libraries/WiFiClientSecure)
+- [SPIFFS](https://github.com/espressif/arduino-esp32/tree/master/libraries/SPIFFS)
+- [ESP32Ping](https://github.com/marian-craciunescu/ESP32Ping) - This is a forked repository that is actively used and maintained.
+
+### ESP8266 Specific Libraries
+
+- [ESP8266WiFi](https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WiFi)
+- [ESP8266mDNS](https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266mDNS)
+- [ArduinoOTA](https://github.com/esp8266/Arduino/tree/master/libraries/ArduinoOTA)
+- [LittleFS](https://github.com/earlephilhower/LittleFS)
+- [Ticker](https://github.com/esp8266/Arduino/tree/master/libraries/Ticker)
+- [ESP8266Ping](https://github.com/dancol90/ESP8266Ping) - A reliable library for ping functionality on the ESP8266.
+
 ## Features
 
 - **Remote Shell Access**: Execute commands remotely on your ESP8266/ESP32 device.
@@ -51,7 +78,7 @@ KlingShell requires a server running on port 80 to receive and send commands. Th
    - Open the `KlingShell` project directory.
 
 3. **Configure your board:**
-   - Edit the `platformio.ini` file to select your target board. Example for ESP32 and ESP8266:
+   - Edit the `platformio.ini` file to select your target board. Example for different ESP32 and ESP8266:
      ```ini
      [platformio]
      default_envs = esp32
@@ -75,6 +102,7 @@ KlingShell requires a server running on port 80 to receive and send commands. Th
          HTTPClient
          WiFiClientSecure
          SPIFFS
+         ESP32Ping
 
      [env:esp8266]
      platform = espressif8266
@@ -87,6 +115,7 @@ KlingShell requires a server running on port 80 to receive and send commands. Th
          ArduinoOTA
          LittleFS
          Ticker
+         ESP8266Ping
 
      [env:ESP32_C3_XIAO]
      platform = espressif32
@@ -118,6 +147,13 @@ KlingShell requires a server running on port 80 to receive and send commands. Th
      upload_speed = 256000
      monitor_speed = 115200
      lib_deps = ${env:esp8266.lib_deps}
+
+     [env:ESP32_ATOM_LITE]
+     platform = espressif32
+     board = m5stack-atom
+     framework = arduino
+     monitor_speed = 115200
+     lib_deps = ${env:esp32.lib_deps}
      ```
 
 4. **Add your Wi-Fi credentials and server address:**
