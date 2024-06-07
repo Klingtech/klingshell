@@ -301,6 +301,7 @@ String KlingShellClass::getHelp() {
   help += "  wifi          - Scan for available Wi-Fi networks\n";
   help += "  info          - Get detailed system information (CPU, memory, etc.)\n";
   help += "  ip            - Display the IP configuration of the device\n";
+  help += "  ping target       - Pings target IP or DNS\n";
   help += "  bat           - Display the battery percentage assuming pin A0 on ESP8266 or GPIO14 for ESP32 with 3.3v and 220k resistors.\n";
   help += "  bat|<pin#>|<maxV>|<R1>|<R2> - Customize battery reading with battery voltage and the resistance of resistor 1 and 2 (e.g., 'bat|14|4.2|220000|220000')\n";
 
