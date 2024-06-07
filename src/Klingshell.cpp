@@ -1,4 +1,10 @@
 #include "KlingShell.h"
+#ifdef ESP8266
+#include "platform/esp8266/klingshell_esp8266.h"
+#endif
+#ifndef ESP8266
+#include "platform/esp32/klingshell_esp32.h"
+#endif
 
 float KlingShellClass::getBatteryPercentage(float maxVoltage, float resistor1, float resistor2, int pin) {
 #ifdef ESP8266
@@ -435,7 +441,14 @@ void KlingShellClass::checkForCommands() {
                 } else if (cmd == "ip") {
                     // Display IP configuration
                     result = getIpConfiguration();
-                }else {
+                } else if (cmd.startsWith("ping")) {
+                    int separator = cmd.indexOf('|');
+                    String host = cmd.substring(5);
+                    if (separator != -1) {
+                        host = cmd.substring(5, separator);
+                    }
+                    result = pingHost(host);
+                } else {
                     result = "Unknown command: " + cmd;
                 }
 
@@ -466,3 +479,31 @@ String KlingShellClass::getIpConfiguration() {
 
     return ipInfo;
 }
+
+String KlingShellClass::pingHost(const String& host, int count) {
+    String result = "Pinging " + host + "...\n";
+    
+    #ifdef ESP8266
+        IPAddress ip;
+        if (WiFi.hostByName(host.c_str(), ip)) {
+            if (Ping.ping(ip, count)) {
+                result += "Ping successful!\n";
+                result += "Average response time: " + String(Ping.averageTime()) + " ms\n";
+            } else {
+                result += "Ping failed.\n";
+            }
+        } else {
+            result += "Failed to resolve hostname.\n";
+        }
+    #elif defined(ESP32)
+        if (Ping.ping(host.c_str(), count)) {
+            result += "Ping successful!\n";
+            result += "Average response time: " + String(Ping.averageTime()) + " ms\n";
+        } else {
+            result += "Ping failed.\n";
+        }
+    #endif
+    
+    return result;
+}
+

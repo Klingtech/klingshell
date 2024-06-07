@@ -9,6 +9,7 @@
 #include <ArduinoOTA.h>
 #include <user_interface.h>
 #include <LittleFS.h>
+#include <ESP8266Ping.h>
 #define SPIFFS LittleFS
 
 void setupOTA();

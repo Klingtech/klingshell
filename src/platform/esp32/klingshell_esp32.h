@@ -9,6 +9,7 @@
 #include <ESPmDNS.h>
 #include <SPIFFS.h>
 #include <ArduinoOTA.h>
+#include <ESP32Ping.h>
 
 void setupOTA();
 
