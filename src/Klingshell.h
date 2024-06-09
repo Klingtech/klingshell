@@ -224,7 +224,7 @@ public:
     void tracePins(bool isAnalog);
     void stopAnalogTracing();
     void stopDigitalTracing();
-    float getBatteryPercentage(float maxVoltage, float resistor1, float resistor2, int pin);
+    float getBatteryPercentage(float maxVoltage, int pin);
     String pingHost(const String& host, int count = 4);
 #ifndef ESP8266
     void playWav(int pin, const String& filename);

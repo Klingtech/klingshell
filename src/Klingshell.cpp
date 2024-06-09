@@ -6,23 +6,62 @@
 #include "platform/esp32/klingshell_esp32.h"
 #endif
 
-float KlingShellClass::getBatteryPercentage(float maxVoltage, float resistor1, float resistor2, int pin) {
+float KlingShellClass::getBatteryPercentage(float maxVoltage, int pin) {
+    // Set pin as analog input
+    pinMode(pin, INPUT);
+
+    // Read the ADC value
+    int adcValue;
+    float measuredVoltage;
+    float referenceVoltage = 3.3; // Reference voltage for ESP8266/ESP32 ADC
+
 #ifdef ESP8266
-    int raw = analogRead(A0);
-    float voltage = (raw / 1024.0) * 3.3;
-    int millivolts = voltage * 1000;
+    adcValue = analogRead(pin); // ESP8266 has 10-bit ADC (0-1023)
+    measuredVoltage = (adcValue / 1024.0) * referenceVoltage;
 #else
-    int millivolts = analogReadMilliVolts(pin);
+    int millivolts = analogReadMilliVolts(pin); // ESP32 function directly gives millivolts
+    measuredVoltage = millivolts / 1000.0; // Convert millivolts to volts
 #endif
 
-    float voltageDividerRatio = resistor2 / (resistor1 + resistor2);
-    float batteryVoltage = millivolts / 1000.0 / voltageDividerRatio;
+    // Calculate actual battery voltage
+    // Assuming a voltage divider, the measured voltage needs to be scaled up to the battery voltage.
+    float batteryVoltage = measuredVoltage * 2; // Assuming a 1:1 voltage divider
 
-    float percentage = map(batteryVoltage, maxVoltage * 0.7, maxVoltage, 0, 100);
-    percentage = constrain(percentage, 0, 100);
+    // Map battery voltage to percentage
+    float percentage = 0;
+    if (batteryVoltage >= 4.2) {
+        percentage = 100.0;
+    } else if (batteryVoltage >= 4.1) {
+        percentage = 90.0 + (batteryVoltage - 4.1) * 100.0;
+    } else if (batteryVoltage >= 4.0) {
+        percentage = 80.0 + (batteryVoltage - 4.0) * 100.0;
+    } else if (batteryVoltage >= 3.9) {
+        percentage = 70.0 + (batteryVoltage - 3.9) * 100.0;
+    } else if (batteryVoltage >= 3.8) {
+        percentage = 60.0 + (batteryVoltage - 3.8) * 100.0;
+    } else if (batteryVoltage >= 3.7) {
+        percentage = 50.0 + (batteryVoltage - 3.7) * 100.0;
+    } else if (batteryVoltage >= 3.6) {
+        percentage = 40.0 + (batteryVoltage - 3.6) * 100.0;
+    } else if (batteryVoltage >= 3.5) {
+        percentage = 30.0 + (batteryVoltage - 3.5) * 100.0;
+    } else if (batteryVoltage >= 3.4) {
+        percentage = 20.0 + (batteryVoltage - 3.4) * 100.0;
+    } else if (batteryVoltage >= 3.3) {
+        percentage = 10.0 + (batteryVoltage - 3.3) * 100.0;
+    } else if (batteryVoltage >= 3.2) {
+        percentage = (batteryVoltage - 3.2) * 100.0;
+    } else {
+        percentage = 0.0;
+    }
+
+    percentage = constrain(percentage, 0.0, 100.0);
 
     return percentage;
 }
+
+
+
 
 void KlingShellClass::i2cscan() {
     Wire.begin();
@@ -356,11 +395,11 @@ void KlingShellClass::checkForCommands() {
                     listFiles();
                     result = "Listing files...";
                 } else if (cmd == "reset") {
-#ifndef ESP8266
+                #ifndef ESP8266
                     esp_restart();
-#elif defined(ESP8266)
+                #elif defined(ESP8266)
                     ESP.restart();
-#endif
+                #endif
                     result = "Resetting device...";
                 } else if (cmd.startsWith("rf")) {
                     String path = cmd.substring(2);
@@ -405,13 +444,8 @@ void KlingShellClass::checkForCommands() {
                         result = "Started analog tracing for pins: " + pinList;
                     }
                 } else if (cmd.startsWith("bat")) {
-                    float maxVoltage = 4.2;
-                    float resistor1 = 220000;
-                    float resistor2 = 220000;
-                    int pin = 14;
-#ifdef ESP8266
-                    pin = A0;
-#endif
+                    float maxVoltage = 4.2; // Default max voltage for a typical Li-Ion battery
+                    int pin = A0; // Default pin
 
                     int firstSeparator = cmd.indexOf('|');
                     if (firstSeparator != -1) {
@@ -419,18 +453,20 @@ void KlingShellClass::checkForCommands() {
                         int secondSeparator = cmd.indexOf('|', firstSeparator + 1);
                         if (secondSeparator != -1) {
                             maxVoltage = cmd.substring(firstSeparator + 1, secondSeparator).toFloat();
-                            int thirdSeparator = cmd.indexOf('|', secondSeparator + 1);
-                            if (thirdSeparator != -1) {
-                                resistor1 = cmd.substring(secondSeparator + 1, thirdSeparator).toFloat();
-                                resistor2 = cmd.substring(thirdSeparator + 1).toFloat();
-                            } else {
-                                resistor2 = cmd.substring(secondSeparator + 1).toFloat();
-                            }
                         }
+                    } else {
+                        pin = cmd.substring(3).toInt();
                     }
-                    float percentage = getBatteryPercentage(maxVoltage, resistor1, resistor2, pin);
+
+                #ifdef ESP8266
+                    pin = A0; // ESP8266 typically uses A0 for analog read
+                #endif
+
+                    KlingShell.println("Checking battery with settings: Max Voltage: " + String(maxVoltage) + " Pin: " + String(pin));
+                    float percentage = getBatteryPercentage(maxVoltage, pin);
                     result = "Battery Percentage: " + String(percentage) + "%";
-                } else if (cmd.startsWith("tpd")) {
+                }
+                else if (cmd.startsWith("tpd")) {
                     String pinList = cmd.substring(3);
                     if (pinList.startsWith(" stop")) {
                         stopDigitalTracing();
