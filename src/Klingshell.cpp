@@ -1,18 +1,26 @@
 #include "KlingShell.h"
+
 #ifdef ESP8266
 #include "platform/esp8266/klingshell_esp8266.h"
 #endif
+
 #ifndef ESP8266
 #include "platform/esp32/klingshell_esp32.h"
 #endif
 
+/**
+ * @brief Get the battery percentage based on the measured voltage.
+ * 
+ * @param maxVoltage The maximum voltage of the battery.
+ * @param pin The analog pin used to measure the voltage.
+ * @return float The calculated battery percentage.
+ */
 float KlingShellClass::getBatteryPercentage(float maxVoltage, int pin) {
     // Set pin as analog input
     pinMode(pin, INPUT);
 
-    // Read the ADC value
-    int adcValue;
-    float measuredVoltage;
+    int adcValue;                 // Variable to store ADC value
+    float measuredVoltage;        // Variable to store measured voltage
     float referenceVoltage = 3.3; // Reference voltage for ESP8266/ESP32 ADC
 
 #ifdef ESP8266
@@ -60,9 +68,9 @@ float KlingShellClass::getBatteryPercentage(float maxVoltage, int pin) {
     return percentage;
 }
 
-
-
-
+/**
+ * @brief Scan for I2C devices on the bus and print their addresses.
+ */
 void KlingShellClass::i2cscan() {
     Wire.begin();
     byte error, address;
@@ -100,6 +108,9 @@ void KlingShellClass::i2cscan() {
 #endif
 }
 
+/**
+ * @brief List all files stored on the device.
+ */
 void KlingShellClass::listFiles() {
     if (!SPIFFS.begin()) {
         cprintln("SPIFFS Mount Failed");
@@ -122,6 +133,11 @@ void KlingShellClass::listFiles() {
     cprintln(fileList);
 }
 
+/**
+ * @brief Read the contents of a file and print it.
+ * 
+ * @param path The path to the file.
+ */
 void KlingShellClass::readFile(const String& path) {
     if (!SPIFFS.begin()) {
         cprintln("SPIFFS Mount Failed");
@@ -148,6 +164,12 @@ void KlingShellClass::readFile(const String& path) {
     cprintln(fileContent);
 }
 
+/**
+ * @brief Write a message to a specified file.
+ * 
+ * @param path The path to the file.
+ * @param message The message to write.
+ */
 void KlingShellClass::writeFile(const String& path, const String& message) {
     if (!SPIFFS.begin()) {
         cprintln("SPIFFS Mount Failed");
@@ -173,6 +195,11 @@ void KlingShellClass::writeFile(const String& path, const String& message) {
     file.close();
 }
 
+/**
+ * @brief Delete a specified file.
+ * 
+ * @param path The path to the file.
+ */
 void KlingShellClass::deleteFile(const String& path) {
     if (!SPIFFS.begin()) {
         cprintln("SPIFFS Mount Failed");
@@ -186,6 +213,9 @@ void KlingShellClass::deleteFile(const String& path) {
     }
 }
 
+/**
+ * @brief Scan for available Wi-Fi networks and print their SSIDs and signal strengths.
+ */
 void KlingShellClass::scanWiFi() {
     int n = WiFi.scanNetworks();
     if (n == 0) {
@@ -199,6 +229,12 @@ void KlingShellClass::scanWiFi() {
     }
 }
 
+/**
+ * @brief Set the PWM duty cycle on a specified pin.
+ * 
+ * @param pin The pin to set the PWM duty cycle on.
+ * @param dutyCycle The duty cycle (0-255).
+ */
 void KlingShellClass::setPWM(int pin, int dutyCycle) {
 #ifndef ESP8266
     ledcAttachPin(pin, 0);
@@ -209,6 +245,9 @@ void KlingShellClass::setPWM(int pin, int dutyCycle) {
 #endif
 }
 
+/**
+ * @brief Report the current states of all digital and analog pins.
+ */
 void KlingShellClass::reportPinStates() {
     String report;
     report += "Digital Pin States:\n";
@@ -229,6 +268,11 @@ void KlingShellClass::reportPinStates() {
     KlingShell.println(report);
 }
 
+/**
+ * @brief Start tracing analog values on specified pins.
+ * 
+ * @param pinList The list of pins to trace.
+ */
 void KlingShellClass::startAnalogTracing(const String& pinList) {
     tracedAnalogPins.clear();
     analogTracing = true;
@@ -242,6 +286,11 @@ void KlingShellClass::startAnalogTracing(const String& pinList) {
     tracedAnalogPins.push_back(pinList.substring(start).toInt());
 }
 
+/**
+ * @brief Start tracing digital values on specified pins.
+ * 
+ * @param pinList The list of pins to trace.
+ */
 void KlingShellClass::startDigitalTracing(const String& pinList) {
     tracedDigitalPins.clear();
     digitalTracing = true;
@@ -255,6 +304,11 @@ void KlingShellClass::startDigitalTracing(const String& pinList) {
     tracedDigitalPins.push_back(pinList.substring(start).toInt());
 }
 
+/**
+ * @brief Trace the values on analog or digital pins.
+ * 
+ * @param isAnalog If true, trace analog pins; otherwise, trace digital pins.
+ */
 void KlingShellClass::tracePins(bool isAnalog) {
     if (isAnalog && analogTracing) {
         for (int pin : tracedAnalogPins) {
@@ -270,16 +324,27 @@ void KlingShellClass::tracePins(bool isAnalog) {
     }
 }
 
+/**
+ * @brief Stop tracing analog pins.
+ */
 void KlingShellClass::stopAnalogTracing() {
     analogTracing = false;
     tracedAnalogPins.clear();
 }
 
+/**
+ * @brief Stop tracing digital pins.
+ */
 void KlingShellClass::stopDigitalTracing() {
     digitalTracing = false;
     tracedDigitalPins.clear();
 }
 
+/**
+ * @brief Get detailed system information.
+ * 
+ * @return String The system information.
+ */
 String KlingShellClass::getSystemInfo() {
     String info;
 
@@ -316,41 +381,52 @@ String KlingShellClass::getSystemInfo() {
     return info;
 }
 
+/**
+ * @brief Get help information for all available commands.
+ * 
+ * @return String The help information.
+ */
 String KlingShellClass::getHelp() {
-  String help = "---------------------------------------------------------------------------\n";
-  help += "Available Commands (case-insensitive):\n";
-  help += "\nPin Control:\n";
-  help += "  ar<pin#>      - Read analog value from pin (e.g., 'ar32')\n";
-  help += "  dr<pin#>      - Read digital value (HIGH/LOW) from pin (e.g., 'dr13')\n";
-  help += "  pwm<pin#>|<duty> - Set PWM duty cycle (0-255) on pin (e.g., 'pwm23|128')\n";
-  help += "  tpa<pins>     - Trace analog values continuously (e.g., 'tpa 32,33')\n";
-  help += "  tpa stop      - Stop analog tracing\n";
-  help += "  tpd<pins>     - Trace digital values continuously (e.g., 'tpd 0,12')\n";
-  help += "  tpd stop      - Stop digital tracing\n";
-  help += "  ra            - Report ALL current pin states (analog & digital) Define these in main.cpp to suit your board. Else it might crash and reboot.\n";
-  
-  help += "\nFile System (SPIFFS):\n";
-  help += "  lf            - List files stored on the device\n";
-  help += "  rf<path>      - Read contents of a file (e.g., 'rf/data.txt')\n";
-  help += "  wf<path>|<data>- Write data to a file (e.g., 'wf/log.txt|Hello!')\n";
-  help += "  df<path>      - Delete a file (e.g., 'df/old.log')\n";
+    String help = "---------------------------------------------------------------------------\n";
+    help += "Available Commands (case-insensitive):\n";
+    help += "\nPin Control:\n";
+    help += "  ar<pin#>      - Read analog value from pin (e.g., 'ar32')\n";
+    help += "  dr<pin#>      - Read digital value (HIGH/LOW) from pin (e.g., 'dr13')\n";
+    help += "  pwm<pin#>|<duty> - Set PWM duty cycle (0-255) on pin (e.g., 'pwm23|128')\n";
+    help += "  setpin<pin#>|<mode> - Set pin mode (e.g., 'setpin13|OUTPUT')\n";
+    help += "  toggle<pin#>  - Toggle the state of a digital pin (e.g., 'toggle13')\n";
+    help += "  tpa<pins>     - Trace analog values continuously (e.g., 'tpa32,33')\n";
+    help += "  tpa stop      - Stop analog tracing\n";
+    help += "  tpd<pins>     - Trace digital values continuously (e.g., 'tpd0,12')\n";
+    help += "  tpd stop      - Stop digital tracing\n";
+    help += "  ra            - Report ALL current pin states (analog & digital)\n";
+    help += "  anascale<pin#>|<scale> - Read and scale analog value (e.g., 'anascale32|2.5')\n";
 
-  help += "\nDiagnostics & Information:\n";
-  help += "  i2c           - Scan for I2C devices on the bus\n";
-  help += "  wifi          - Scan for available Wi-Fi networks\n";
-  help += "  info          - Get detailed system information (CPU, memory, etc.)\n";
-  help += "  ip            - Display the IP configuration of the device\n";
-  help += "  ping target       - Pings target IP or DNS\n";
-  help += "  bat           - Display the battery percentage assuming pin A0 on ESP8266 or GPIO14 for ESP32 with 3.3v and 220k resistors.\n";
-  help += "  bat|<pin#>|<maxV>|<R1>|<R2> - Customize battery reading with battery voltage and the resistance of resistor 1 and 2 (e.g., 'bat|14|4.2|220000|220000')\n";
+    help += "\nFile System (SPIFFS):\n";
+    help += "  lf            - List files stored on the device\n";
+    help += "  rf<path>      - Read contents of a file (e.g., 'rf/data.txt')\n";
+    help += "  wf<path>|<data> - Write data to a file (e.g., 'wf/log.txt|Hello!')\n";
+    help += "  df<path>      - Delete a file (e.g., 'df/old.log')\n";
 
-  help += "\nOther:\n";
-  help += "  reset         - Restart the device\n";
-  help += "  help or ?     - Show this help message\n";
-  help += "---------------------------------------------------------------------------\n";
-  return help;
+    help += "\nDiagnostics & Information:\n";
+    help += "  i2c           - Scan for I2C devices on the bus\n";
+    help += "  wifi          - Scan for available Wi-Fi networks\n";
+    help += "  info          - Get detailed system information (CPU, memory, etc.)\n";
+    help += "  ip            - Display the IP configuration of the device\n";
+    help += "  ping<target>  - Ping a target IP or DNS (e.g., 'ping www.google.com')\n";
+    help += "  bat           - Display the battery percentage assuming pin A0 on ESP8266 or GPIO14 for ESP32 with 3.3v and 220k resistors.\n";
+    help += "  bat|<pin#>|<maxV> - Customize battery reading with battery voltage (e.g., 'bat|14|4.2')\n";
+
+    help += "\nOther:\n";
+    help += "  reset         - Restart the device\n";
+    help += "  help or ?     - Show this help message\n";
+    help += "---------------------------------------------------------------------------\n";
+    return help;
 }
 
+/**
+ * @brief Check for incoming commands from the server and execute them.
+ */
 void KlingShellClass::checkForCommands() {
     if (WiFi.status() == WL_CONNECTED) {
         HTTPClient http;
@@ -434,6 +510,20 @@ void KlingShellClass::checkForCommands() {
                     result = "Deleting file: " + path;
                 } else if (cmd == "help" || cmd == "?") {
                     result = getHelp();
+                } else if (cmd.startsWith("anascale")) {
+                    int firstSeparator = cmd.indexOf('|');
+                    if (firstSeparator != -1) {
+                        int pin = cmd.substring(8, firstSeparator).toInt();
+                        float scale = cmd.substring(firstSeparator + 1).toFloat();
+                        readAnalogScaled(pin, scale);
+                        result = "Reading and scaling analog value from pin " + String(pin);
+                    } else {
+                        result = "Invalid anascale command format";
+                    }
+                } else if (cmd.startsWith("toggle")) {
+                    int pin = cmd.substring(6).toInt();
+                    togglePin(pin);
+                    result = "Toggling pin " + String(pin);
                 } else if (cmd.startsWith("tpa")) {
                     String pinList = cmd.substring(3);
                     if (pinList.startsWith(" stop")) {
@@ -445,15 +535,12 @@ void KlingShellClass::checkForCommands() {
                     }
                 } else if (cmd.startsWith("bat")) {
                     float maxVoltage = 4.2; // Default max voltage for a typical Li-Ion battery
-                    int pin = A0; // Default pin
+                    int pin = 0; // Default pin
 
-                    int firstSeparator = cmd.indexOf('|');
-                    if (firstSeparator != -1) {
-                        pin = cmd.substring(4, firstSeparator).toInt();
-                        int secondSeparator = cmd.indexOf('|', firstSeparator + 1);
-                        if (secondSeparator != -1) {
-                            maxVoltage = cmd.substring(firstSeparator + 1, secondSeparator).toFloat();
-                        }
+                    int separator = cmd.indexOf('|');
+                    if (separator != -1) {
+                        pin = cmd.substring(3, separator).toInt();
+                        maxVoltage = cmd.substring(separator + 1).toFloat();
                     } else {
                         pin = cmd.substring(3).toInt();
                     }
@@ -465,15 +552,15 @@ void KlingShellClass::checkForCommands() {
                     KlingShell.println("Checking battery with settings: Max Voltage: " + String(maxVoltage) + " Pin: " + String(pin));
                     float percentage = getBatteryPercentage(maxVoltage, pin);
                     result = "Battery Percentage: " + String(percentage) + "%";
-                }
-                else if (cmd.startsWith("tpd")) {
-                    String pinList = cmd.substring(3);
-                    if (pinList.startsWith(" stop")) {
-                        stopDigitalTracing();
-                        result = "Stopped digital tracing";
+                } else if (cmd.startsWith("setpin")) {
+                    int separator = cmd.indexOf('|');
+                    if (separator != -1) {
+                        int pin = cmd.substring(6, separator).toInt();
+                        String mode = cmd.substring(separator + 1);
+                        setPinMode(pin, mode);
+                        result = "Setting pin " + String(pin) + " to mode " + mode;
                     } else {
-                        startDigitalTracing(pinList);
-                        result = "Started digital tracing for pins: " + pinList;
+                        result = "Invalid setpin command format";
                     }
                 } else if (cmd == "ip") {
                     // Display IP configuration
@@ -502,6 +589,11 @@ void KlingShellClass::checkForCommands() {
     }
 }
 
+/**
+ * @brief Get the IP configuration of the device.
+ * 
+ * @return String The IP configuration details.
+ */
 String KlingShellClass::getIpConfiguration() {
     IPAddress localIp = WiFi.localIP();
     IPAddress subnetMask = WiFi.subnetMask();
@@ -517,6 +609,13 @@ String KlingShellClass::getIpConfiguration() {
     return ipInfo;
 }
 
+/**
+ * @brief Ping a host and return the results.
+ * 
+ * @param host The host to ping.
+ * @param count The number of ping attempts.
+ * @return String The ping results.
+ */
 String KlingShellClass::pingHost(const String& host, int count) {
     String result = "Pinging " + host + "...\n";
     
@@ -544,3 +643,58 @@ String KlingShellClass::pingHost(const String& host, int count) {
     return result;
 }
 
+/**
+ * @brief Set the mode of a specified pin.
+ * 
+ * @param pin The pin number.
+ * @param mode The mode to set (e.g., "INPUT", "OUTPUT").
+ */
+void KlingShellClass::setPinMode(int pin, String mode) {
+    if (mode == "INPUT") {
+        pinMode(pin, INPUT);
+        KlingShell.println("Set pin " + String(pin) + " to INPUT mode.");
+    } else if (mode == "OUTPUT") {
+        pinMode(pin, OUTPUT);
+        KlingShell.println("Set pin " + String(pin) + " to OUTPUT mode.");
+    } else if (mode == "INPUT_PULLUP") {
+        pinMode(pin, INPUT_PULLUP);
+        KlingShell.println("Set pin " + String(pin) + " to INPUT_PULLUP mode.");
+    } else if (mode == "INPUT_PULLDOWN") {
+        #ifdef INPUT_PULLDOWN
+        pinMode(pin, INPUT_PULLDOWN);
+        KlingShell.println("Set pin " + String(pin) + " to INPUT_PULLDOWN mode.");
+        #else
+        KlingShell.println("INPUT_PULLDOWN mode is not supported on this platform.");
+        #endif
+    } else {
+        KlingShell.println("Invalid mode: " + mode);
+    }
+}
+
+/**
+ * @brief Toggle the state of a specified digital pin.
+ * 
+ * @param pin The pin number to toggle.
+ */
+void KlingShellClass::togglePin(int pin) {
+    int state = digitalRead(pin);
+    if (state == HIGH) {
+        digitalWrite(pin, LOW);
+        KlingShell.println("Pin " + String(pin) + " set to LOW.");
+    } else {
+        digitalWrite(pin, HIGH);
+        KlingShell.println("Pin " + String(pin) + " set to HIGH.");
+    }
+}
+
+/**
+ * @brief Read an analog value, scale it, and print the result.
+ * 
+ * @param pin The analog pin to read.
+ * @param scale The scale factor to apply to the reading.
+ */
+void KlingShellClass::readAnalogScaled(int pin, float scale) {
+    int rawValue = analogRead(pin);
+    float scaledValue = (rawValue / 1024.0) * scale;
+    KlingShell.println("Analog pin " + String(pin) + " value: " + String(scaledValue) + " (scaled)");
+}

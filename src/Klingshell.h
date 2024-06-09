@@ -226,9 +226,9 @@ public:
     void stopDigitalTracing();
     float getBatteryPercentage(float maxVoltage, int pin);
     String pingHost(const String& host, int count = 4);
-#ifndef ESP8266
-    void playWav(int pin, const String& filename);
-#endif
+    void setPinMode(int pin, String mode);
+    void togglePin(int pin);
+    void readAnalogScaled(int pin, float scale);
 };
 
 #if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_ARDUINOOTA)
