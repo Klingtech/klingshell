@@ -142,6 +142,7 @@ public:
 
         http.begin(client, url);
         http.addHeader("Content-Type", "application/json");
+        //Serial.print(queueItem.toJson());
         httpResponseCode = http.POST(queueItem.toJson());
 
         if (httpResponseCode > 0) {
@@ -153,7 +154,7 @@ public:
             Serial.print("Error code: ");
             Serial.println(httpResponseCode);
         }
-
+        
         http.end();
         lastFailed = !result;
         return result;
@@ -229,6 +230,7 @@ public:
     void setPinMode(int pin, String mode);
     void togglePin(int pin);
     void readAnalogScaled(int pin, float scale);
+    String getNRF52BLEMACAddress();
 };
 
 #if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_ARDUINOOTA)

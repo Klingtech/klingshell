@@ -8,6 +8,7 @@
 #include "platform/esp32/klingshell_esp32.h"
 #endif
 
+
 /**
  * @brief Get the battery percentage based on the measured voltage.
  * 
@@ -66,6 +67,29 @@ float KlingShellClass::getBatteryPercentage(float maxVoltage, int pin) {
     percentage = constrain(percentage, 0.0, 100.0);
 
     return percentage;
+}
+
+String KlingShellClass::getNRF52BLEMACAddress() {
+    typedef volatile uint32_t REG32;
+    #define pREG32 (REG32 *)
+    #define DEVICE_ID_HIGH    (*(pREG32 (0x10000060)))
+    #define DEVICE_ID_LOW     (*(pREG32 (0x10000064)))
+    #define BLE_MAC_ADDRESS_HIGH  (*(pREG32 (0x100000a8)))
+    #define BLE_MAC_ADDRESS_LOW   (*(pREG32 (0x100000a4)))
+
+    uint32_t addr_high = ((BLE_MAC_ADDRESS_HIGH) & 0x0000ffff) | 0x0000c000;
+    uint32_t addr_low  = BLE_MAC_ADDRESS_LOW;
+
+    char BLEmacAddress[18];  // Buffer for MAC address string
+
+    snprintf(BLEmacAddress, sizeof(BLEmacAddress), "%02X:%02X:%02X:%02X:%02X:%02X",
+             (addr_high >> 8) & 0xFF,
+             (addr_high) & 0xFF,
+             (addr_low >> 24) & 0xFF,
+             (addr_low >> 16) & 0xFF,
+             (addr_low >> 8) & 0xFF,
+             (addr_low) & 0xFF);
+    return String(BLEmacAddress);
 }
 
 /**
@@ -354,8 +378,13 @@ String KlingShellClass::getSystemInfo() {
     uint8_t bleMac[6];
     esp_read_mac(bleMac, ESP_MAC_BT);
     char bleMacStr[18];
+    #ifndef NRF52840_XXAA
     sprintf(bleMacStr, "%02X:%02X:%02X:%02X:%02X:%02X", bleMac[0], bleMac[1], bleMac[2], bleMac[3], bleMac[4], bleMac[5]);
     info += "BLE MAC Address: " + String(bleMacStr) + "\n";
+    #endif
+    #ifdef NRF52840_XXAA
+    info += "Test BLE MAC Address: " + String(getBLEMACAddress()) + "\n";
+    #endif
     info += "CPU Frequency: " + String(getCpuFrequencyMhz()) + " MHz\n";
     info += "Free Heap Size: " + String(ESP.getFreeHeap()) + " bytes\n";
     info += "Minimum Free Heap Size: " + String(ESP.getMinFreeHeap()) + " bytes\n";
@@ -698,3 +727,4 @@ void KlingShellClass::readAnalogScaled(int pin, float scale) {
     float scaledValue = (rawValue / 1024.0) * scale;
     KlingShell.println("Analog pin " + String(pin) + " value: " + String(scaledValue) + " (scaled)");
 }
+
