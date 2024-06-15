@@ -41,6 +41,8 @@ String getDeviceId() {
             break;
         case CHIP_ESP32C3: 
             chip_model = "ESP32-C3";
+        case CHIP_ESP32C6: 
+            chip_model = "ESP32-C6";
             break;
         case CHIP_ESP32H2: 
             chip_model = "ESP32-H2";
@@ -52,11 +54,19 @@ String getDeviceId() {
     int chip_revision = chip_info.revision;
 
     uint8_t mac[6];
+    #ifndef ESP32_C6
     esp_efuse_mac_get_default(mac);
+    #endif
+    #ifdef ESP32_C6
+String macAddr = WiFi.macAddress();
+    macAddr.replace(":", ""); // Remove colons for formatting
+    macAddr.toUpperCase();    // Convert to upper case
+    chip_model = "ESP32-C6";
     char macStr[13];
     snprintf(macStr, sizeof(macStr), "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
-    return String(chip_model) + "-Rev" + String(chip_revision) + "-" + String(macStr);
+    return String(chip_model) + "-" + macAddr;  // Convert chip_model to String
+    #endif
 #elif defined(ESP8266)
     uint8_t mac[6];
     WiFi.macAddress(mac);
@@ -129,7 +139,9 @@ void setup() {
 
     String deviceId = getDeviceId();
 
+#ifndef ESP32_C6
     WiFi.mode(WIFI_STA);
+#endif
     WiFi.begin(ssid, password);
     while (WiFi.waitForConnectResult() != WL_CONNECTED) {
         Serial.println("Connection Failed! Rebooting...");
