@@ -40,3 +40,6 @@ src/credentials.h
 data
 test
 workspace.code-workspace
+config.h
+
+server/sounds

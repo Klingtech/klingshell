@@ -152,6 +152,19 @@ const server = http.createServer(async (req, res) => {
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end('{"message": "Device removed"}');
         });
+    } else if (req.method === 'GET' && parsedUrl.pathname.startsWith('/sounds/')) {
+        // Serve the WAV file
+        const soundFile = path.join(__dirname, parsedUrl.pathname);
+        fs.exists(soundFile, (exists) => {
+            if (exists) {
+                res.writeHead(200, { 'Content-Type': 'audio/wav' });
+                const readStream = fs.createReadStream(soundFile);
+                readStream.pipe(res);
+            } else {
+                res.writeHead(404, { 'Content-Type': 'text/plain' });
+                res.end('404 - File Not Found');
+            }
+        });
     } else {
         res.writeHead(404, { 'Content-Type': 'application/json' });
         res.end('{"error": "Route not found"}');
