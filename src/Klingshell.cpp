@@ -261,11 +261,9 @@ void KlingShellClass::scanWiFi() {
  */
 void KlingShellClass::setPWM(int pin, int dutyCycle) {
 #ifndef ESP8266
-    #ifndef ESP32_C6
     ledcAttachPin(pin, 0);
     ledcSetup(0, 5000, 8);
     ledcWrite(0, dutyCycle);
-    #endif
 #elif defined(ESP8266)
     analogWrite(pin, dutyCycle);
 #endif
@@ -375,7 +373,6 @@ String KlingShellClass::getSystemInfo() {
     String info;
 
 #ifndef ESP8266
-    #ifndef ESP32_C6
     String wifiMac = WiFi.macAddress();
     info += "WiFi MAC Address: " + wifiMac + "\n";
     uint8_t bleMac[6];
@@ -402,7 +399,6 @@ String KlingShellClass::getSystemInfo() {
     } else {
         info += "No partition information available.\n";
     }
-    #endif
 #elif defined(ESP8266)
     String wifiMac = WiFi.macAddress();
     info += "WiFi MAC Address: " + wifiMac + "\n";
