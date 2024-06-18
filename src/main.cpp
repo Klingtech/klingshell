@@ -41,10 +41,8 @@ String getDeviceId() {
             break;
         case CHIP_ESP32C3: 
             chip_model = "ESP32-C3";
-        case CHIP_ESP32C6: 
-            chip_model = "ESP32-C6";
             break;
-        case CHIP_ESP32H2: 
+       case CHIP_ESP32H2: 
             chip_model = "ESP32-H2";
             break;
         default: 
