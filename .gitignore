@@ -41,3 +41,4 @@ data
 test
 workspace.code-workspace
 server/sounds
+.DS_Store
